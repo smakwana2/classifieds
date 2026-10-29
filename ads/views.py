@@ -78,7 +78,9 @@ def category_list(request):
 
 
 def ad_detail(request, pk):
-    ad = get_object_or_404(Ad.objects.select_related('category__parent', 'owner'), pk=pk)
+    ad = get_object_or_404(
+        Ad.objects.select_related('category__parent', 'owner').prefetch_related('images', 'tags'), pk=pk
+    )
     return render(request, 'ads/ad_detail.html', {'ad': ad})
 
 

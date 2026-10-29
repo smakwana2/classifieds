@@ -9,11 +9,7 @@
 {% if ad.price is not None %}<p class="price" style="font-size:1.4rem">${{ ad.price }}</p>{% endif %}
 <p class="meta">Posted by {{ ad.owner.username }} {{ ad.created_at|timesince }} ago{% if ad.location_name %} · {{ ad.location_name }}{% endif %}</p>
 <div>{% for tag in ad.tags.all %}<a class="tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}</div>
-{% if ad.images.all %}
-  <div class="gallery">
-    {% for image in ad.images.all %}<a href="{{ image.image.url }}"><img src="{{ image.image.url }}" alt="{{ ad.title }} photo {{ forloop.counter }}"></a>{% endfor %}
-  </div>
-{% endif %}
+{% include "ads/_photo_grid.html" with size="large" link="lightbox" %}
 <div class="card" style="margin-top:16px">{{ ad.description|linebreaks }}</div>
 
 {% if ad.has_coordinates %}
@@ -29,14 +25,58 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+// Click a photo to view it full size; arrow keys / buttons step through, Esc closes.
+(function () {
+  const links = Array.from(document.querySelectorAll('[data-lightbox]'));
+  if (!links.length) return;
+  let box = null, index = 0;
+
+  function show(i) {
+    index = (i + links.length) % links.length;
+    box.querySelector('img').src = links[index].href;
+    box.querySelector('img').alt = links[index].querySelector('img').alt;
+    box.querySelector('.count').textContent = `${index + 1} / ${links.length}`;
+  }
+  function close() {
+    box.remove();
+    box = null;
+    document.removeEventListener('keydown', onKey);
+    links[index].focus();
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') show(index - 1);
+    else if (e.key === 'ArrowRight') show(index + 1);
+  }
+  function open(i) {
+    box = document.createElement('div');
+    box.className = 'lightbox';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.innerHTML = '<img><span class="count"></span>' +
+      '<button class="close" aria-label="Close">×</button>' +
+      (links.length > 1 ? '<button class="prev" aria-label="Previous photo">‹</button>' +
+                          '<button class="next" aria-label="Next photo">›</button>' : '');
+    box.addEventListener('click', e => {
+      if (e.target.classList.contains('prev')) show(index - 1);
+      else if (e.target.classList.contains('next')) show(index + 1);
+      else if (e.target.tagName !== 'IMG') close();
+    });
+    document.body.appendChild(box);
+    document.addEventListener('keydown', onKey);
+    show(i);
+    box.querySelector('.close').focus();
+  }
+  links.forEach((link, i) => link.addEventListener('click', e => { e.preventDefault(); open(i); }));
+})();
+</script>
 {% if ad.has_coordinates %}
 <script>
 const el = document.getElementById('map');
 const ll = [parseFloat(el.dataset.lat), parseFloat(el.dataset.lng)];
 const map = L.map(el).setView(ll, 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+addBaseLayer(map);
 L.marker(ll).addTo(map);
 </script>
 {% endif %}

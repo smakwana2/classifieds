@@ -1,0 +1,24 @@
+{% comment %}
+  Photo mosaic for an ad. One photo fills the grid; two sit side by side; with three,
+  the first is large on the left and the other two stack on the right.
+  Pass size="large" for the ad page and link="lightbox" to open photos in the viewer.
+{% endcomment %}
+{% with images=ad.images.all %}
+  {% if images %}
+    <div class="photo-grid photos-{{ images|length }}{% if size == 'large' %} large{% endif %}">
+      {% for image in images %}
+        {% if link == 'lightbox' %}
+          <a href="{{ image.image.url }}" class="photo" data-lightbox data-index="{{ forloop.counter0 }}">
+            <img src="{{ image.image.url }}" alt="{{ ad.title }}, photo {{ forloop.counter }} of {{ images|length }}">
+          </a>
+        {% else %}
+          <a href="{{ ad.get_absolute_url }}" class="photo" tabindex="-1">
+            <img src="{{ image.image.url }}" alt="" loading="lazy">
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% elif size != 'large' %}
+    <a href="{{ ad.get_absolute_url }}" class="photo-grid photos-0" tabindex="-1"><span>No photos</span></a>
+  {% endif %}
+{% endwith %}

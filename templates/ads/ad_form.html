@@ -50,9 +50,7 @@
 const latInput = document.getElementById('id_latitude');
 const lngInput = document.getElementById('id_longitude');
 const map = L.map('map').setView([20, 0], 2);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+addBaseLayer(map);
 let marker = null;
 
 function place(lat, lng, zoom) {

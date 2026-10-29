@@ -204,3 +204,22 @@ class EditAndImageTests(TestCase):
         self.assertTrue(os.path.exists(path))
         self.client.post(reverse('ads:delete', args=[self.ad.pk]))
         self.assertFalse(os.path.exists(path))
+
+    def test_photo_grids_show_every_photo(self):
+        images = [AdImage.objects.create(ad=self.ad, image=make_image()) for _ in range(3)]
+        home = self.client.get(reverse('ads:list'))
+        detail = self.client.get(self.ad.get_absolute_url())
+        self.assertContains(home, 'photo-grid photos-3')
+        self.assertContains(detail, 'photo-grid photos-3 large')
+        for image in images:
+            self.assertContains(home, image.image.url)
+            self.assertContains(detail, f'href="{image.image.url}" class="photo" data-lightbox')
+
+    def test_listing_without_photos_shows_placeholder(self):
+        self.assertContains(self.client.get(reverse('ads:list')), 'No photos')
+        self.assertNotContains(self.client.get(self.ad.get_absolute_url()), 'class="photo-grid')
+
+    def test_image_urls_avoid_ad_blocker_patterns(self):
+        # Ad blockers hide images whose URL contains "/ads/".
+        image = AdImage.objects.create(ad=self.ad, image=make_image())
+        self.assertNotIn('/ads/', image.image.url)

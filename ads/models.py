@@ -112,7 +112,7 @@ class AdImage(models.Model):
     MAX_PER_AD = 3
 
     ad = models.ForeignKey(Ad, related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='ads/%Y/%m/')
+    image = models.ImageField(upload_to='listings/%Y/%m/')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
