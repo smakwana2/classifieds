@@ -13,7 +13,7 @@ PAGE_SIZE = 12
 
 def _render_ad_list(request, ads, heading, extra=None):
     form = SearchForm(request.GET or None)
-    ads = ads.select_related('category__parent', 'owner').prefetch_related('tags')
+    ads = ads.select_related('category__parent', 'owner').prefetch_related('tags', 'images')
     origin = None
 
     if form.is_valid():
@@ -84,15 +84,26 @@ def ad_detail(request, pk):
 
 @login_required
 def ad_create(request):
-    form = AdForm(request.POST or None)
+    form = AdForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         ad = form.save(commit=False)
         ad.owner = request.user
         ad.save()
-        form.save_tags(ad)
+        form.save_related(ad)
         messages.success(request, 'Your ad has been posted.')
         return redirect(ad)
     return render(request, 'ads/ad_form.html', {'form': form})
+
+
+@login_required
+def ad_edit(request, pk):
+    ad = get_object_or_404(Ad, pk=pk, owner=request.user)
+    form = AdForm(request.POST or None, request.FILES or None, instance=ad)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Your ad has been updated.')
+        return redirect(ad)
+    return render(request, 'ads/ad_form.html', {'form': form, 'ad': ad})
 
 
 @login_required

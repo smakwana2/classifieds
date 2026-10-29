@@ -41,6 +41,13 @@
     .errorlist { color: #b42318; padding-left: 18px; margin: 4px 0; }
     .map { height: 320px; border-radius: 8px; border: 1px solid var(--border); margin: 8px 0 16px; max-width: 520px; }
     .pagination { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
+    .card-img { display: block; width: calc(100% + 32px); margin: -16px -16px 12px; aspect-ratio: 4 / 3;
+                object-fit: cover; border-radius: 8px 8px 0 0; background: #eef2f1; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+    .gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+    .thumbs { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+    .thumb { display: flex; flex-direction: column; gap: 4px; font-weight: 400 !important; }
+    .thumb img { width: 140px; height: 105px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
     table { border-collapse: collapse; width: 100%; background: #fff; }
     td, th { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
   </style>

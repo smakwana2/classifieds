@@ -9,6 +9,11 @@
 {% if ad.price is not None %}<p class="price" style="font-size:1.4rem">${{ ad.price }}</p>{% endif %}
 <p class="meta">Posted by {{ ad.owner.username }} {{ ad.created_at|timesince }} ago{% if ad.location_name %} · {{ ad.location_name }}{% endif %}</p>
 <div>{% for tag in ad.tags.all %}<a class="tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}</div>
+{% if ad.images.all %}
+  <div class="gallery">
+    {% for image in ad.images.all %}<a href="{{ image.image.url }}"><img src="{{ image.image.url }}" alt="{{ ad.title }} photo {{ forloop.counter }}"></a>{% endfor %}
+  </div>
+{% endif %}
 <div class="card" style="margin-top:16px">{{ ad.description|linebreaks }}</div>
 
 {% if ad.has_coordinates %}
@@ -16,7 +21,10 @@
 {% endif %}
 
 {% if user == ad.owner %}
-  <p><a class="btn danger" href="{% url 'ads:delete' ad.pk %}">Delete this ad</a></p>
+  <p>
+    <a class="btn" href="{% url 'ads:edit' ad.pk %}">Edit this ad</a>
+    <a class="btn danger" href="{% url 'ads:delete' ad.pk %}">Delete this ad</a>
+  </p>
 {% endif %}
 {% endblock %}
 

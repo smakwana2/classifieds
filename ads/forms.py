@@ -1,7 +1,23 @@
 from django import forms
 from django.utils.text import slugify
 
-from .models import Ad, Category, Tag
+from .models import Ad, AdImage, Category, Tag
+
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleImageField(forms.ImageField):
+    widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        files = data if isinstance(data, (list, tuple)) else [data] if data else []
+        if not files and self.required:
+            raise forms.ValidationError(self.error_messages['required'], code='required')
+        return [super(MultipleImageField, self).clean(f, initial) for f in files]
 
 
 class AdForm(forms.ModelForm):
@@ -9,6 +25,16 @@ class AdForm(forms.ModelForm):
         label='Tags',
         required=False,
         help_text='Comma-separated, e.g. "vintage, bargain".',
+    )
+    images = MultipleImageField(
+        required=False,
+        help_text=f'Up to {AdImage.MAX_PER_AD} images in total, 5 MB each.',
+        widget=MultipleFileInput(attrs={'accept': 'image/*'}),
+    )
+    remove_images = forms.ModelMultipleChoiceField(
+        queryset=AdImage.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
     )
 
     class Meta:
@@ -27,13 +53,33 @@ class AdForm(forms.ModelForm):
         )
         if self.instance.pk:
             self.fields['tag_names'].initial = ', '.join(t.name for t in self.instance.tags.all())
+            self.fields['remove_images'].queryset = self.instance.images.all()
+        else:
+            del self.fields['remove_images']
 
     def clean(self):
         cleaned = super().clean()
         lat, lng = cleaned.get('latitude'), cleaned.get('longitude')
         if (lat is None) != (lng is None):
             raise forms.ValidationError('Enter both latitude and longitude, or neither.')
+
+        existing = self.instance.images.count() if self.instance.pk else 0
+        removed = len(cleaned.get('remove_images') or [])
+        added = len(cleaned.get('images') or [])
+        if existing - removed + added > AdImage.MAX_PER_AD:
+            self.add_error(
+                'images',
+                f'An ad can have at most {AdImage.MAX_PER_AD} images '
+                f'({existing - removed} kept, {added} added).',
+            )
         return cleaned
+
+    def clean_images(self):
+        images = self.cleaned_data['images']
+        for image in images:
+            if image.size > MAX_IMAGE_BYTES:
+                raise forms.ValidationError(f'“{image.name}” is larger than 5 MB.')
+        return images
 
     def clean_tag_names(self):
         names = []
@@ -46,15 +92,21 @@ class AdForm(forms.ModelForm):
     def save(self, commit=True):
         ad = super().save(commit=commit)
         if commit:
-            self.save_tags(ad)
+            self.save_related(ad)
         return ad
 
-    def save_tags(self, ad):
+    def save_related(self, ad):
+        """Save tags and images; call after the ad itself has been saved."""
         tags = []
         for name in self.cleaned_data['tag_names']:
             tag = Tag.objects.filter(slug=slugify(name)).first() or Tag.objects.create(name=name)
             tags.append(tag)
         ad.tags.set(tags)
+
+        for image in self.cleaned_data.get('remove_images') or []:
+            image.delete()
+        for upload in self.cleaned_data['images']:
+            AdImage.objects.create(ad=ad, image=upload)
 
 
 class SearchForm(forms.Form):

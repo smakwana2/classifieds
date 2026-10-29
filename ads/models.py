@@ -3,6 +3,8 @@ import math
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -104,3 +106,23 @@ class Ad(models.Model):
         dlmb = math.radians(lng - self.longitude)
         a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2
         return 2 * r * math.asin(math.sqrt(a))
+
+
+class AdImage(models.Model):
+    MAX_PER_AD = 3
+
+    ad = models.ForeignKey(Ad, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='ads/%Y/%m/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'pk']
+
+    def __str__(self):
+        return self.image.name
+
+
+@receiver(post_delete, sender=AdImage)
+def delete_image_file(sender, instance, **kwargs):
+    # Runs for cascaded deletes too (deleting an ad or a user), unlike Model.delete().
+    instance.image.delete(save=False)

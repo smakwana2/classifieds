@@ -1,4 +1,7 @@
 <div class="card">
+  {% with image=ad.images.all|first %}
+    {% if image %}<a href="{{ ad.get_absolute_url }}"><img class="card-img" src="{{ image.image.url }}" alt=""></a>{% endif %}
+  {% endwith %}
   <h3><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h3>
   {% if ad.price is not None %}<div class="price">${{ ad.price }}</div>{% endif %}
   <div class="meta">
