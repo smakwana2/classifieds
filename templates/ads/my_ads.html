@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}My ads · Classifieds{% endblock %}
+{% block content %}
+<h1>My ads</h1>
+{% if ads %}
+  <div style="overflow-x:auto">
+  <table>
+    <tr><th>Title</th><th>Category</th><th>Price</th><th>Posted</th><th></th></tr>
+    {% for ad in ads %}
+      <tr>
+        <td><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></td>
+        <td>{{ ad.category }}</td>
+        <td>{% if ad.price is not None %}${{ ad.price }}{% endif %}</td>
+        <td>{{ ad.created_at|date:"M j, Y" }}</td>
+        <td><a href="{% url 'ads:delete' ad.pk %}">Delete</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+  </div>
+{% else %}
+  <p>You haven't posted any ads yet. <a href="{% url 'ads:create' %}">Post one now.</a></p>
+{% endif %}
+<p style="margin-top:32px"><a href="{% url 'delete_account' %}" style="color:#b42318">Delete my account</a></p>
+{% endblock %}

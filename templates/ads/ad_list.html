@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} · Classifieds{% endblock %}
+{% block content %}
+<h1>{{ heading }}</h1>
+{% if category and category.subcategories.all %}
+  <p>Subcategories:
+    {% for sub in category.subcategories.all %}<a class="tag" href="{{ sub.get_absolute_url }}">{{ sub.name }}</a>{% endfor %}
+  </p>
+{% endif %}
+
+<form class="search" method="get">
+  <div><label for="id_q">Search</label>{{ form.q }}</div>
+  {% if not category and not tag %}<div><label for="id_category">Category</label>{{ form.category }}</div>{% endif %}
+  <div><label for="id_radius">Within (km)</label>{{ form.radius }}</div>
+  {{ form.lat }}{{ form.lng }}
+  <button type="button" class="btn secondary" id="near-me">📍 Near me</button>
+  <button class="btn">Search</button>
+  {% if request.GET %}<a href="{{ request.path }}">Clear</a>{% endif %}
+</form>
+{% if form.errors %}<ul class="errorlist">{% for field, errs in form.errors.items %}{% for e in errs %}<li>{{ e }}</li>{% endfor %}{% endfor %}</ul>{% endif %}
+{% if origin %}<p class="meta" id="origin-note">Showing ads with a location, sorted by distance from you.</p>{% endif %}
+
+{% if page.object_list %}
+  <div class="grid">{% for ad in page.object_list %}{% include "ads/_ad_card.html" %}{% endfor %}</div>
+  {% if page.has_other_pages %}
+    <div class="pagination">
+      {% if page.has_previous %}<a href="?{{ querystring }}&page={{ page.previous_page_number }}">← Previous</a>{% endif %}
+      <span class="meta">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?{{ querystring }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
+    </div>
+  {% endif %}
+{% else %}
+  <p>No ads found.{% if user.is_authenticated %} <a href="{% url 'ads:create' %}">Post the first one?</a>{% endif %}</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('near-me').addEventListener('click', function () {
+  const btn = this;
+  if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+  btn.textContent = 'Locating…';
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    document.getElementById('id_lat').value = pos.coords.latitude.toFixed(6);
+    document.getElementById('id_lng').value = pos.coords.longitude.toFixed(6);
+    const radius = document.getElementById('id_radius');
+    if (!radius.value) radius.value = 25;
+    btn.form.submit();
+  }, function () {
+    btn.textContent = '📍 Near me';
+    alert('Could not get your location.');
+  });
+});
+</script>
+{% endblock %}

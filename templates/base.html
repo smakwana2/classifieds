@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Classifieds{% endblock %}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root { --accent: #1d6f5c; --muted: #6b7280; --border: #e5e7eb; --bg: #f8faf9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: #1f2937; line-height: 1.5; }
+    a { color: var(--accent); }
+    header { background: #fff; border-bottom: 1px solid var(--border); }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+    nav { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 12px 0; }
+    nav .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; margin-right: auto; }
+    nav form { display: inline; }
+    main { padding: 24px 0 48px; }
+    .btn { display: inline-block; background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+           padding: 8px 14px; font: inherit; cursor: pointer; text-decoration: none; }
+    .btn.secondary { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+    .btn.danger { background: #b42318; }
+    .btn.link { background: none; color: var(--accent); padding: 0; }
+    .messages { list-style: none; padding: 0; }
+    .messages li { background: #e7f4ef; border: 1px solid #b7dfd0; padding: 8px 12px; border-radius: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .card h3 { margin: 0 0 4px; font-size: 1.05rem; }
+    .meta { color: var(--muted); font-size: .9rem; }
+    .price { font-weight: 700; }
+    .tag { display: inline-block; background: #eef2f1; border-radius: 999px; padding: 1px 10px;
+           font-size: .85rem; text-decoration: none; margin: 2px 2px 0 0; }
+    .search { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 20px; }
+    .search label { display: block; font-size: .85rem; color: var(--muted); }
+    input, select, textarea { font: inherit; padding: 7px 9px; border: 1px solid #cbd5d1; border-radius: 6px;
+                              max-width: 100%; }
+    .form p { margin: 0 0 14px; }
+    .form label { display: block; font-weight: 600; }
+    .form input:not([type=checkbox]), .form select, .form textarea { width: 100%; max-width: 520px; }
+    .helptext, .form .helptext { display: block; color: var(--muted); font-size: .85rem; }
+    .errorlist { color: #b42318; padding-left: 18px; margin: 4px 0; }
+    .map { height: 320px; border-radius: 8px; border: 1px solid var(--border); margin: 8px 0 16px; max-width: 520px; }
+    .pagination { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    td, th { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="{% url 'ads:list' %}">Classifieds</a>
+      <a href="{% url 'ads:categories' %}">Categories</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'ads:my_ads' %}">My ads</a>
+        <a class="btn" href="{% url 'ads:create' %}">Post an ad</a>
+        <span class="meta">{{ user.username }}</span>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn link">Log out</button></form>
+      {% else %}
+        <a href="{% url 'login' %}">Log in</a>
+        <a class="btn" href="{% url 'signup' %}">Sign up</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  {% if messages %}
+    <ul class="messages">{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ ad.title }} · Classifieds{% endblock %}
+{% block content %}
+<p class="meta">
+  {% if ad.category.parent %}<a href="{{ ad.category.parent.get_absolute_url }}">{{ ad.category.parent.name }}</a> › {% endif %}
+  <a href="{{ ad.category.get_absolute_url }}">{{ ad.category.name }}</a>
+</p>
+<h1>{{ ad.title }}</h1>
+{% if ad.price is not None %}<p class="price" style="font-size:1.4rem">${{ ad.price }}</p>{% endif %}
+<p class="meta">Posted by {{ ad.owner.username }} {{ ad.created_at|timesince }} ago{% if ad.location_name %} · {{ ad.location_name }}{% endif %}</p>
+<div>{% for tag in ad.tags.all %}<a class="tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}</div>
+<div class="card" style="margin-top:16px">{{ ad.description|linebreaks }}</div>
+
+{% if ad.has_coordinates %}
+  <div id="map" class="map" data-lat="{{ ad.latitude|stringformat:'f' }}" data-lng="{{ ad.longitude|stringformat:'f' }}"></div>
+{% endif %}
+
+{% if user == ad.owner %}
+  <p><a class="btn danger" href="{% url 'ads:delete' ad.pk %}">Delete this ad</a></p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if ad.has_coordinates %}
+<script>
+const el = document.getElementById('map');
+const ll = [parseFloat(el.dataset.lat), parseFloat(el.dataset.lng)];
+const map = L.map(el).setView(ll, 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+L.marker(ll).addTo(map);
+</script>
+{% endif %}
+{% endblock %}

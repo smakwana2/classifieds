@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Post an ad · Classifieds{% endblock %}
+{% block content %}
+<h1>Post an ad</h1>
+<form method="post" class="form">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    {% if field.name == 'latitude' %}
+      <p>
+        <strong>Map location</strong>
+        <span class="helptext">Click the map to place your ad, or
+          <button type="button" class="btn link" id="use-location">use my current location</button>.</span>
+      </p>
+      <div id="map" class="map"></div>
+    {% endif %}
+    <p>
+      {{ field.label_tag }}
+      {{ field }}
+      {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+      {{ field.errors }}
+    </p>
+  {% endfor %}
+  <button class="btn">Post ad</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const latInput = document.getElementById('id_latitude');
+const lngInput = document.getElementById('id_longitude');
+const map = L.map('map').setView([20, 0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+let marker = null;
+
+function place(lat, lng, zoom) {
+  latInput.value = lat.toFixed(6);
+  lngInput.value = lng.toFixed(6);
+  if (marker) marker.setLatLng([lat, lng]); else marker = L.marker([lat, lng]).addTo(map);
+  if (zoom) map.setView([lat, lng], zoom);
+}
+
+if (latInput.value && lngInput.value) place(parseFloat(latInput.value), parseFloat(lngInput.value), 13);
+map.on('click', e => place(e.latlng.lat, e.latlng.lng));
+document.getElementById('use-location').addEventListener('click', () => {
+  if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => place(pos.coords.latitude, pos.coords.longitude, 14),
+    () => alert('Could not get your location.')
+  );
+});
+</script>
+{% endblock %}
