@@ -1,81 +1,75 @@
 {% extends "base.html" %}
 {% block title %}{{ ad.title }} · Classifieds{% endblock %}
 {% block content %}
-<p class="meta">
-  {% if ad.category.parent %}<a href="{{ ad.category.parent.get_absolute_url }}">{{ ad.category.parent.name }}</a> › {% endif %}
-  <a href="{{ ad.category.get_absolute_url }}">{{ ad.category.name }}</a>
-</p>
-<h1>{{ ad.title }}</h1>
-{% if ad.price is not None %}<p class="price" style="font-size:1.4rem">${{ ad.price }}</p>{% endif %}
-<p class="meta">Posted by {{ ad.owner.username }} {{ ad.created_at|timesince }} ago{% if ad.location_name %} · {{ ad.location_name }}{% endif %}</p>
-<div>{% for tag in ad.tags.all %}<a class="tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}</div>
-{% include "ads/_photo_grid.html" with size="large" link="lightbox" %}
-<div class="card" style="margin-top:16px">{{ ad.description|linebreaks }}</div>
+<header class="detail-head">
+  <div class="crumbs">
+    <a href="{% url 'ads:list' %}">Home</a> ›
+    {% if ad.category.parent %}<a href="{{ ad.category.parent.get_absolute_url }}">{{ ad.category.parent.name }}</a> › {% endif %}
+    <a href="{{ ad.category.get_absolute_url }}">{{ ad.category.name }}</a>
+  </div>
+  <h1>{{ ad.title }}</h1>
+  <div class="meta-row">
+    {% if ad.location_name %}<span><svg class="icon"><use href="#i-pin"/></svg>{{ ad.location_name }}</span>{% endif %}
+    <span><svg class="icon"><use href="#i-clock"/></svg>Posted {{ ad.created_at|timesince }} ago</span>
+  </div>
+</header>
 
-{% if ad.has_coordinates %}
-  <div id="map" class="map" data-lat="{{ ad.latitude|stringformat:'f' }}" data-lng="{{ ad.longitude|stringformat:'f' }}"></div>
-{% endif %}
+<div class="detail">
+  <div>
+    {% include "ads/_photo_grid.html" with size="large" link="lightbox" %}
 
-{% if user == ad.owner %}
-  <p>
-    <a class="btn" href="{% url 'ads:edit' ad.pk %}">Edit this ad</a>
-    <a class="btn danger" href="{% url 'ads:delete' ad.pk %}">Delete this ad</a>
-  </p>
-{% endif %}
+    <section class="panel" {% if ad.images.all %}style="margin-top:20px"{% endif %}>
+      <h2>Description</h2>
+      <div class="description">{{ ad.description|linebreaks }}</div>
+      {% if ad.tags.all %}
+        <div class="chip-row" style="margin-top:18px">
+          {% for tag in ad.tags.all %}<a class="chip tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}
+        </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="sidebar">
+    <section class="panel">
+      {% if ad.price is not None %}
+        <div class="price-big{% if not ad.price %} free{% endif %}">{% if ad.price %}${{ ad.price|floatformat:"-2g" }}{% else %}Free{% endif %}</div>
+      {% else %}
+        <div class="price-big" style="font-size:1.4rem">Price on request</div>
+      {% endif %}
+      <a class="chip" href="{{ ad.category.get_absolute_url }}" style="margin-top:12px">
+        <span aria-hidden="true">{{ ad.category.icon }}</span>{{ ad.category }}
+      </a>
+      <div class="seller">
+        <span class="avatar lg">{{ ad.owner.username|slice:":1" }}</span>
+        <div><strong>{{ ad.owner.username }}</strong><small>Member since {{ ad.owner.date_joined|date:"F Y" }}</small></div>
+      </div>
+      {% if user == ad.owner %}
+        <div class="owner-actions">
+          <a class="btn secondary" href="{% url 'ads:edit' ad.pk %}"><svg class="icon"><use href="#i-edit"/></svg>Edit this ad</a>
+          <a class="btn ghost-danger" href="{% url 'ads:delete' ad.pk %}"><svg class="icon"><use href="#i-trash"/></svg>Delete this ad</a>
+        </div>
+      {% endif %}
+    </section>
+
+    {% if ad.has_coordinates or ad.location_name %}
+      <section class="panel">
+        <h2>Location</h2>
+        {% if ad.location_name %}<div class="location-line"><svg class="icon"><use href="#i-pin"/></svg>{{ ad.location_name }}</div>{% endif %}
+        {% if ad.has_coordinates %}
+          <div id="map" class="map" data-lat="{{ ad.latitude|stringformat:'f' }}" data-lng="{{ ad.longitude|stringformat:'f' }}"></div>
+        {% endif %}
+      </section>
+    {% endif %}
+  </aside>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-// Click a photo to view it full size; arrow keys / buttons step through, Esc closes.
-(function () {
-  const links = Array.from(document.querySelectorAll('[data-lightbox]'));
-  if (!links.length) return;
-  let box = null, index = 0;
-
-  function show(i) {
-    index = (i + links.length) % links.length;
-    box.querySelector('img').src = links[index].href;
-    box.querySelector('img').alt = links[index].querySelector('img').alt;
-    box.querySelector('.count').textContent = `${index + 1} / ${links.length}`;
-  }
-  function close() {
-    box.remove();
-    box = null;
-    document.removeEventListener('keydown', onKey);
-    links[index].focus();
-  }
-  function onKey(e) {
-    if (e.key === 'Escape') close();
-    else if (e.key === 'ArrowLeft') show(index - 1);
-    else if (e.key === 'ArrowRight') show(index + 1);
-  }
-  function open(i) {
-    box = document.createElement('div');
-    box.className = 'lightbox';
-    box.setAttribute('role', 'dialog');
-    box.setAttribute('aria-modal', 'true');
-    box.innerHTML = '<img><span class="count"></span>' +
-      '<button class="close" aria-label="Close">×</button>' +
-      (links.length > 1 ? '<button class="prev" aria-label="Previous photo">‹</button>' +
-                          '<button class="next" aria-label="Next photo">›</button>' : '');
-    box.addEventListener('click', e => {
-      if (e.target.classList.contains('prev')) show(index - 1);
-      else if (e.target.classList.contains('next')) show(index + 1);
-      else if (e.target.tagName !== 'IMG') close();
-    });
-    document.body.appendChild(box);
-    document.addEventListener('keydown', onKey);
-    show(i);
-    box.querySelector('.close').focus();
-  }
-  links.forEach((link, i) => link.addEventListener('click', e => { e.preventDefault(); open(i); }));
-})();
-</script>
 {% if ad.has_coordinates %}
 <script>
 const el = document.getElementById('map');
 const ll = [parseFloat(el.dataset.lat), parseFloat(el.dataset.lng)];
-const map = L.map(el).setView(ll, 13);
+const map = L.map(el, { scrollWheelZoom: false }).setView(ll, 13);
 addBaseLayer(map);
 L.marker(ll).addTo(map);
 </script>

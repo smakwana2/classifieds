@@ -1,0 +1,32 @@
+<form class="searchbar" method="get" role="search">
+  <label class="field grow">
+    <svg class="icon"><use href="#i-search"/></svg>
+    <span class="visually-hidden">Search</span>
+    <input type="search" name="q" id="id_q" value="{{ form.q.value|default_if_none:'' }}" placeholder="What are you looking for?">
+  </label>
+  {% if not category and not tag %}
+    <label class="field">
+      <svg class="icon"><use href="#i-grid"/></svg>
+      <span class="visually-hidden">Category</span>
+      {{ form.category }}
+    </label>
+  {% endif %}
+  <label class="field radius">
+    <svg class="icon"><use href="#i-pin"/></svg>
+    <span class="visually-hidden">Within (km)</span>
+    <input type="number" name="radius" id="id_radius" min="1" max="20000" step="any"
+           value="{{ form.radius.value|default_if_none:'' }}" placeholder="Radius km">
+  </label>
+  {{ form.lat }}{{ form.lng }}
+  <button type="button" class="btn secondary" id="near-me"><svg class="icon"><use href="#i-locate"/></svg><span>Near me</span></button>
+  <button class="btn">Search</button>
+</form>
+{% if form.errors %}
+  <ul class="errorlist">{% for field, errs in form.errors.items %}{% for e in errs %}<li>{{ e }}</li>{% endfor %}{% endfor %}</ul>
+{% endif %}
+{% if origin or filtered %}
+  <p class="search-note">
+    {% if origin %}Showing ads with a location, nearest first.{% else %}Showing filtered results.{% endif %}
+    <a href="{{ request.path }}">Clear search</a>
+  </p>
+{% endif %}

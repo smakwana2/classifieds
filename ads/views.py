@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -48,13 +48,15 @@ def _render_ad_list(request, ads, heading, extra=None):
         'heading': heading,
         'origin': origin,
         'querystring': query.urlencode(),
+        'filtered': any(request.GET.get(k) for k in ('q', 'category', 'lat', 'radius')),
+        'top_categories': Category.objects.filter(parent=None),
     }
     context.update(extra or {})
     return render(request, 'ads/ad_list.html', context)
 
 
 def ad_list(request):
-    return _render_ad_list(request, Ad.objects.all(), 'Latest ads')
+    return _render_ad_list(request, Ad.objects.all(), 'Latest ads', {'is_home': True})
 
 
 def category_ads(request, slug):
@@ -69,9 +71,8 @@ def tag_ads(request, slug):
 
 
 def category_list(request):
-    categories = (
-        Category.objects.filter(parent=None)
-        .prefetch_related('subcategories')
+    categories = Category.objects.filter(parent=None).prefetch_related(
+        Prefetch('subcategories', queryset=Category.objects.annotate(ad_count=Count('ads')))
     )
     tags = Tag.objects.annotate(ad_count=Count('ads')).filter(ad_count__gt=0).order_by('-ad_count', 'name')[:50]
     return render(request, 'ads/category_list.html', {'categories': categories, 'tags': tags})
@@ -122,5 +123,5 @@ def ad_delete(request, pk):
 
 @login_required
 def my_ads(request):
-    ads = request.user.ads.select_related('category__parent')
+    ads = request.user.ads.select_related('category__parent').prefetch_related('images')
     return render(request, 'ads/my_ads.html', {'ads': ads})

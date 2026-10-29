@@ -1,12 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Delete account · Classifieds{% endblock %}
 {% block content %}
-<h1>Delete your account</h1>
-<p>This permanently deletes your account <strong>and every ad you've posted</strong>. It can't be undone.</p>
-<form method="post" class="form">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button class="btn danger">Delete my account</button>
-  <a class="btn secondary" href="{% url 'ads:my_ads' %}">Cancel</a>
-</form>
+<div class="narrow">
+  <div class="panel">
+    <h1>Delete your account</h1>
+    <p class="sub">Signed in as {{ user.username }}</p>
+    <div class="warning-box">
+      <svg class="icon"><use href="#i-alert"/></svg>
+      <span>This permanently deletes your account <strong>and every ad you've posted</strong>, including photos. It can't be undone.</span>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}{% include "_field.html" %}{% endfor %}
+      <div class="form-actions" style="margin-top:6px">
+        <button class="btn danger">Delete my account</button>
+        <a class="btn secondary" href="{% url 'ads:my_ads' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

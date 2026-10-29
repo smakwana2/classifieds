@@ -1,0 +1,9 @@
+{% comment %}Renders one form field: label, input, help text and errors. Pass field=...{% endcomment %}
+<div class="form-field{% if field.errors %} has-error{% endif %}">
+  {% if field.label %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %}<span class="optional">optional</span>{% endif %}</label>
+  {% endif %}
+  {{ field }}
+  {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}
+  {{ field.errors }}
+</div>

@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Delete ad · Classifieds{% endblock %}
 {% block content %}
-<h1>Delete “{{ ad.title }}”?</h1>
-<p>This can't be undone.</p>
-<form method="post">
-  {% csrf_token %}
-  <button class="btn danger">Yes, delete it</button>
-  <a class="btn secondary" href="{{ ad.get_absolute_url }}">Cancel</a>
-</form>
+<div class="narrow">
+  <div class="panel">
+    <h1>Delete this ad?</h1>
+    <p class="sub">“{{ ad.title }}”</p>
+    <div class="warning-box">
+      <svg class="icon"><use href="#i-alert"/></svg>
+      <span>The ad and its photos will be removed permanently. This can't be undone.</span>
+    </div>
+    <form method="post" class="form-actions">
+      {% csrf_token %}
+      <button class="btn danger"><svg class="icon"><use href="#i-trash"/></svg>Yes, delete it</button>
+      <a class="btn secondary" href="{{ ad.get_absolute_url }}">Cancel</a>
+    </form>
+  </div>
+</div>
 {% endblock %}

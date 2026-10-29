@@ -19,6 +19,8 @@
       {% endfor %}
     </div>
   {% elif size != 'large' %}
-    <a href="{{ ad.get_absolute_url }}" class="photo-grid photos-0" tabindex="-1"><span>No photos</span></a>
+    <a href="{{ ad.get_absolute_url }}" class="photo-grid photos-0" tabindex="-1">
+      <svg class="icon"><use href="#i-photo"/></svg><span>No photos</span>
+    </a>
   {% endif %}
 {% endwith %}

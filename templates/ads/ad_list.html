@@ -1,36 +1,66 @@
 {% extends "base.html" %}
-{% block title %}{{ heading }} · Classifieds{% endblock %}
+{% block title %}{% if is_home %}Classifieds · Buy and sell near you{% else %}{{ heading }} · Classifieds{% endif %}{% endblock %}
 {% block content %}
-<h1>{{ heading }}</h1>
-{% if category and category.subcategories.all %}
-  <p>Subcategories:
-    {% for sub in category.subcategories.all %}<a class="tag" href="{{ sub.get_absolute_url }}">{{ sub.name }}</a>{% endfor %}
-  </p>
+
+{% if is_home %}
+  <section class="hero">
+    <span class="eyebrow">Local classifieds</span>
+    <h1>Find it nearby. Sell it fast.</h1>
+    <p class="lede">Browse cars, homes, jobs and everyday treasures from people in your area — or post your own ad in a minute.</p>
+    {% include "ads/_searchbar.html" %}
+  </section>
+
+  {% if top_categories and not filtered %}
+    <nav class="category-strip" aria-label="Categories">
+      {% for cat in top_categories %}
+        <a href="{{ cat.get_absolute_url }}"><span class="emoji" aria-hidden="true">{{ cat.icon }}</span>{{ cat.name }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+{% else %}
+  <header class="page-head">
+    {% if category %}
+      <div class="crumbs">
+        <a href="{% url 'ads:categories' %}">Categories</a>
+        {% if category.parent %} › <a href="{{ category.parent.get_absolute_url }}">{{ category.parent.name }}</a>{% endif %}
+      </div>
+      <h1><span aria-hidden="true">{{ category.icon }}</span> {{ category.name }}</h1>
+      {% if category.subcategories.all %}
+        <div class="chip-row">
+          {% for sub in category.subcategories.all %}<a class="chip" href="{{ sub.get_absolute_url }}">{{ sub.name }}</a>{% endfor %}
+        </div>
+      {% endif %}
+    {% elif tag %}
+      <div class="crumbs"><a href="{% url 'ads:categories' %}">Tags</a></div>
+      <h1>#{{ tag.name }}</h1>
+    {% else %}
+      <h1>{{ heading }}</h1>
+    {% endif %}
+  </header>
+  <div style="margin-bottom:28px">{% include "ads/_searchbar.html" %}</div>
 {% endif %}
 
-<form class="search" method="get">
-  <div><label for="id_q">Search</label>{{ form.q }}</div>
-  {% if not category and not tag %}<div><label for="id_category">Category</label>{{ form.category }}</div>{% endif %}
-  <div><label for="id_radius">Within (km)</label>{{ form.radius }}</div>
-  {{ form.lat }}{{ form.lng }}
-  <button type="button" class="btn secondary" id="near-me">📍 Near me</button>
-  <button class="btn">Search</button>
-  {% if request.GET %}<a href="{{ request.path }}">Clear</a>{% endif %}
-</form>
-{% if form.errors %}<ul class="errorlist">{% for field, errs in form.errors.items %}{% for e in errs %}<li>{{ e }}</li>{% endfor %}{% endfor %}</ul>{% endif %}
-{% if origin %}<p class="meta" id="origin-note">Showing ads with a location, sorted by distance from you.</p>{% endif %}
+<div class="section-head">
+  <h2>{% if filtered %}Results{% elif is_home %}Fresh listings{% else %}Listings{% endif %}</h2>
+  <span class="count">{{ page.paginator.count }} ad{{ page.paginator.count|pluralize }}</span>
+</div>
 
 {% if page.object_list %}
   <div class="grid">{% for ad in page.object_list %}{% include "ads/_ad_card.html" %}{% endfor %}</div>
   {% if page.has_other_pages %}
-    <div class="pagination">
-      {% if page.has_previous %}<a href="?{{ querystring }}&page={{ page.previous_page_number }}">← Previous</a>{% endif %}
-      <span class="meta">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-      {% if page.has_next %}<a href="?{{ querystring }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
-    </div>
+    <nav class="pagination" aria-label="Pages">
+      {% if page.has_previous %}<a class="btn secondary small" href="?{{ querystring }}&page={{ page.previous_page_number }}">← Previous</a>{% endif %}
+      <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a class="btn secondary small" href="?{{ querystring }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
+    </nav>
   {% endif %}
 {% else %}
-  <p>No ads found.{% if user.is_authenticated %} <a href="{% url 'ads:create' %}">Post the first one?</a>{% endif %}</p>
+  <div class="empty">
+    <span class="big" aria-hidden="true">🔍</span>
+    <h2>No ads found</h2>
+    <p>{% if filtered %}Try a different search or a wider radius.{% else %}Nothing has been posted here yet.{% endif %}</p>
+    {% if user.is_authenticated %}<a class="btn" href="{% url 'ads:create' %}"><svg class="icon"><use href="#i-plus"/></svg>Post an ad</a>{% endif %}
+  </div>
 {% endif %}
 {% endblock %}
 
@@ -38,8 +68,9 @@
 <script>
 document.getElementById('near-me').addEventListener('click', function () {
   const btn = this;
+  const label = btn.querySelector('span');
   if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
-  btn.textContent = 'Locating…';
+  label.textContent = 'Locating…';
   navigator.geolocation.getCurrentPosition(function (pos) {
     document.getElementById('id_lat').value = pos.coords.latitude.toFixed(6);
     document.getElementById('id_lng').value = pos.coords.longitude.toFixed(6);
@@ -47,7 +78,7 @@ document.getElementById('near-me').addEventListener('click', function () {
     if (!radius.value) radius.value = 25;
     btn.form.submit();
   }, function () {
-    btn.textContent = '📍 Near me';
+    label.textContent = 'Near me';
     alert('Could not get your location.');
   });
 });

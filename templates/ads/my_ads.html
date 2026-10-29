@@ -1,24 +1,48 @@
 {% extends "base.html" %}
 {% block title %}My ads · Classifieds{% endblock %}
 {% block content %}
-<h1>My ads</h1>
+<header class="page-head section-head">
+  <div>
+    <h1>My ads</h1>
+    <p class="muted" style="margin:6px 0 0">{{ ads|length }} listing{{ ads|length|pluralize }}</p>
+  </div>
+  <a class="btn" href="{% url 'ads:create' %}"><svg class="icon"><use href="#i-plus"/></svg>Post an ad</a>
+</header>
+
 {% if ads %}
-  <div style="overflow-x:auto">
-  <table>
-    <tr><th>Title</th><th>Category</th><th>Price</th><th>Posted</th><th></th></tr>
+  <div class="list">
     {% for ad in ads %}
-      <tr>
-        <td><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></td>
-        <td>{{ ad.category }}</td>
-        <td>{% if ad.price is not None %}${{ ad.price }}{% endif %}</td>
-        <td>{{ ad.created_at|date:"M j, Y" }}</td>
-        <td><a href="{% url 'ads:edit' ad.pk %}">Edit</a> · <a href="{% url 'ads:delete' ad.pk %}">Delete</a></td>
-      </tr>
+      <div class="list-item">
+        {% include "ads/_photo_grid.html" %}
+        <div>
+          <h3><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h3>
+          <div class="meta-row" style="margin-top:4px">
+            {% if ad.price is not None %}<span><strong style="color:var(--ink)">{% if ad.price %}${{ ad.price|floatformat:"-2g" }}{% else %}Free{% endif %}</strong></span>{% endif %}
+            <span>{{ ad.category }}</span>
+            <span><svg class="icon"><use href="#i-clock"/></svg>{{ ad.created_at|date:"M j, Y" }}</span>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="btn secondary small" href="{% url 'ads:edit' ad.pk %}"><svg class="icon"><use href="#i-edit"/></svg>Edit</a>
+          <a class="btn ghost-danger small" href="{% url 'ads:delete' ad.pk %}"><svg class="icon"><use href="#i-trash"/></svg>Delete</a>
+        </div>
+      </div>
     {% endfor %}
-  </table>
   </div>
 {% else %}
-  <p>You haven't posted any ads yet. <a href="{% url 'ads:create' %}">Post one now.</a></p>
+  <div class="empty">
+    <span class="big" aria-hidden="true">📦</span>
+    <h2>No ads yet</h2>
+    <p>Got something to sell? Your first listing is a minute away.</p>
+    <a class="btn" href="{% url 'ads:create' %}"><svg class="icon"><use href="#i-plus"/></svg>Post an ad</a>
+  </div>
 {% endif %}
-<p style="margin-top:32px"><a href="{% url 'delete_account' %}" style="color:#b42318">Delete my account</a></p>
+
+<section class="danger-zone">
+  <div>
+    <h2>Delete my account</h2>
+    <p>Permanently removes your account and every ad you've posted.</p>
+  </div>
+  <a class="btn ghost-danger small" href="{% url 'delete_account' %}">Delete my account</a>
+</section>
 {% endblock %}

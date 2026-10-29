@@ -1,12 +1,18 @@
-<div class="card">
-  {% include "ads/_photo_grid.html" %}
-  <h3><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h3>
-  {% if ad.price is not None %}<div class="price">${{ ad.price }}</div>{% endif %}
-  <div class="meta">
-    <a href="{{ ad.category.get_absolute_url }}">{{ ad.category }}</a>
-    {% if ad.location_name %} · {{ ad.location_name }}{% endif %}
-    {% if ad.distance is not None %} · {{ ad.distance|floatformat:1 }} km away{% endif %}
+<article class="card">
+  <div class="card-media">
+    {% include "ads/_photo_grid.html" %}
+    {% if ad.price is not None %}<span class="price-badge">{% if ad.price %}${{ ad.price|floatformat:"-2g" }}{% else %}Free{% endif %}</span>{% endif %}
   </div>
-  <div class="meta">{{ ad.created_at|timesince }} ago</div>
-  <div>{% for tag in ad.tags.all %}<a class="tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}</div>
-</div>
+  <div class="card-body">
+    <a class="category" href="{{ ad.category.get_absolute_url }}">{{ ad.category.name }}</a>
+    <h3><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h3>
+    <div class="meta-row">
+      {% if ad.location_name %}<span><svg class="icon"><use href="#i-pin"/></svg>{{ ad.location_name }}</span>{% endif %}
+      {% if ad.distance is not None %}<span>{{ ad.distance|floatformat:1 }} km away</span>{% endif %}
+      <span><svg class="icon"><use href="#i-clock"/></svg>{{ ad.created_at|timesince }} ago</span>
+    </div>
+    {% if ad.tags.all %}
+      <div class="chip-row">{% for tag in ad.tags.all %}<a class="chip tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}</div>
+    {% endif %}
+  </div>
+</article>

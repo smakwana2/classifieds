@@ -1,11 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Sign up · Classifieds{% endblock %}
 {% block content %}
-<h1>Create an account</h1>
-<form method="post" class="form">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button class="btn">Sign up</button>
-</form>
-<p>Already have an account? <a href="{% url 'login' %}">Log in</a>.</p>
+<div class="narrow">
+  <div class="panel">
+    <h1>Create your account</h1>
+    <p class="sub">Free, and you can start posting straight away.</p>
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      {% for field in form %}{% include "_field.html" %}{% endfor %}
+      <button class="btn block" style="margin-top:6px">Sign up</button>
+    </form>
+  </div>
+  <p class="alt">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+</div>
 {% endblock %}

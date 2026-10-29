@@ -9,6 +9,16 @@ from django.urls import reverse
 from django.utils.text import slugify
 
 
+CATEGORY_ICONS = {
+    'for-sale': '🛍️',
+    'vehicles': '🚗',
+    'housing': '🏠',
+    'jobs': '💼',
+    'services': '🛠️',
+    'community': '🤝',
+}
+
+
 class Category(models.Model):
     """A category; categories with a parent are subcategories."""
 
@@ -40,6 +50,14 @@ class Category(models.Model):
 
     def get_absolute_url(self):
         return reverse('ads:category', args=[self.slug])
+
+    @property
+    def icon(self):
+        """Emoji for the top-level category this one belongs to."""
+        root = self
+        while root.parent_id:
+            root = root.parent
+        return CATEGORY_ICONS.get(root.slug, '🏷️')
 
     def self_and_descendant_ids(self):
         ids = [self.pk]

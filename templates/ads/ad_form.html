@@ -1,48 +1,80 @@
 {% extends "base.html" %}
 {% block title %}{% if ad %}Edit ad{% else %}Post an ad{% endif %} · Classifieds{% endblock %}
 {% block content %}
-<h1>{% if ad %}Edit “{{ ad.title }}”{% else %}Post an ad{% endif %}</h1>
-<form method="post" enctype="multipart/form-data" class="form">
-  {% csrf_token %}
-  {{ form.non_field_errors }}
-  {% for field in form %}
-    {% if field.name == 'remove_images' %}
+<div class="form-shell">
+  <header class="page-head">
+    {% if ad %}<div class="crumbs"><a href="{{ ad.get_absolute_url }}">← Back to ad</a></div>{% endif %}
+    <h1>{% if ad %}Edit “{{ ad.title }}”{% else %}Post an ad{% endif %}</h1>
+    <p class="muted" style="margin:6px 0 0">{% if ad %}Update the details, photos or location.{% else %}Tell buyers what you've got — it only takes a minute.{% endif %}</p>
+  </header>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+
+    <section class="form-section">
+      <h2><span class="step">1</span>The basics</h2>
+      <p class="hint">A clear title and an honest description sell faster.</p>
+      {% include "_field.html" with field=form.title %}
+      {% include "_field.html" with field=form.description %}
+      <div class="field-row">
+        {% include "_field.html" with field=form.price %}
+        {% include "_field.html" with field=form.category %}
+      </div>
+      {% include "_field.html" with field=form.tag_names %}
+    </section>
+
+    <section class="form-section">
+      <h2><span class="step">2</span>Photos</h2>
+      <p class="hint">{{ form.images.help_text }}</p>
       {% if ad.images.all %}
-        <p>
-          <strong>Current images</strong>
-          <span class="helptext">Tick any you want to remove.</span>
-        </p>
-        <div class="thumbs">
+        <span class="form-label">Current photos <span class="optional">tick any to remove</span></span>
+        <div class="thumbs" style="margin:0 0 18px">
           {% for image in ad.images.all %}
-            <label class="thumb">
+            <div class="thumb">
               <img src="{{ image.image.url }}" alt="">
-              <span><input type="checkbox" name="remove_images" value="{{ image.pk }}"
-                {% if image.pk|stringformat:"s" in field.value %}checked{% endif %}> Remove</span>
-            </label>
+              <label class="remove-toggle">
+                <input type="checkbox" name="remove_images" value="{{ image.pk }}"
+                  {% if image.pk|stringformat:"s" in form.remove_images.value %}checked{% endif %}> Remove
+              </label>
+            </div>
           {% endfor %}
         </div>
-        {{ field.errors }}
+        {{ form.remove_images.errors }}
       {% endif %}
-    {% else %}
-      {% if field.name == 'latitude' %}
-        <p>
-          <strong>Map location</strong>
-          <span class="helptext">Click the map to place your ad, or
-            <button type="button" class="btn link" id="use-location">use my current location</button>.</span>
-        </p>
-        <div id="map" class="map"></div>
-      {% endif %}
-      <p>
-        {{ field.label_tag }}
-        {{ field }}
-        {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
-        {{ field.errors }}
-      </p>
-    {% endif %}
-  {% endfor %}
-  <button class="btn">{% if ad %}Save changes{% else %}Post ad{% endif %}</button>
-  {% if ad %}<a class="btn secondary" href="{{ ad.get_absolute_url }}">Cancel</a>{% endif %}
-</form>
+      <div class="form-field{% if form.images.errors %} has-error{% endif %}">
+        <label class="dropzone" for="{{ form.images.id_for_label }}">
+          <svg class="icon"><use href="#i-upload"/></svg>
+          <strong>Click to choose photos</strong>
+          <span>or drag them here · JPG, PNG, WebP</span>
+          {{ form.images }}
+        </label>
+        <div class="thumbs" id="new-photo-previews"></div>
+        {{ form.images.errors }}
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h2><span class="step">3</span>Location</h2>
+      <p class="hint">Helps nearby buyers find you. Click the map to drop a pin.</p>
+      {% include "_field.html" with field=form.location_name %}
+      <div class="map-toolbar">
+        <span class="form-label" style="margin:0">Map pin <span class="optional">optional</span></span>
+        <button type="button" class="btn secondary small" id="use-location"><svg class="icon"><use href="#i-locate"/></svg>Use my location</button>
+      </div>
+      <div id="map" class="map"></div>
+      <div class="field-row">
+        {% include "_field.html" with field=form.latitude %}
+        {% include "_field.html" with field=form.longitude %}
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <button class="btn">{% if ad %}Save changes{% else %}Post ad{% endif %}</button>
+      <a class="btn secondary" href="{% if ad %}{{ ad.get_absolute_url }}{% else %}{% url 'ads:list' %}{% endif %}">Cancel</a>
+    </div>
+  </form>
+</div>
 {% endblock %}
 
 {% block scripts %}
