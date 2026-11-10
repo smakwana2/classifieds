@@ -45,6 +45,12 @@ class AdTestCase(TestCase):
         self.assertContains(response, 'Vehicles')
         self.assertContains(response, 'Bicycles')
 
+    def test_static_assets_are_versioned(self):
+        # site.css/site.js links carry ?v=<mtime> so browsers fetch them again after a change.
+        html = self.client.get(reverse('ads:list')).content.decode()
+        self.assertRegex(html, r'/static/css/site\.css\?v=\d+"')
+        self.assertRegex(html, r'/static/js/site\.js\?v=\d+"')
+
     def test_search(self):
         self.assertContains(self.client.get(reverse('ads:list'), {'q': 'road'}), 'Road bike')
         self.assertNotContains(self.client.get(reverse('ads:list'), {'q': 'sofa'}), 'Road bike')

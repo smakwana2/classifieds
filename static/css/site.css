@@ -170,7 +170,7 @@ a.chip:hover { border-color: var(--brand); color: var(--brand); }
    ========================================================================== */
 .hero {
   position: relative; overflow: hidden; border-radius: 22px; margin-bottom: 30px;
-  padding: clamp(28px, 6vw, 56px) clamp(20px, 5vw, 52px);
+  padding: clamp(20px, 3.2vw, 34px) clamp(18px, 4vw, 44px);
   background:
     radial-gradient(circle at 85% 15%, rgba(255, 255, 255, .14), transparent 40%),
     radial-gradient(circle at 10% 110%, rgba(232, 102, 74, .35), transparent 45%),
@@ -178,9 +178,9 @@ a.chip:hover { border-color: var(--brand); color: var(--brand); }
   color: #fff;
   box-shadow: var(--shadow-md);
 }
-.hero h1 { font-size: clamp(2rem, 5vw, 3.1rem); max-width: 16ch; }
-.hero p.lede { margin: 12px 0 26px; max-width: 46ch; font-size: 1.06rem; color: rgba(255, 255, 255, .85); }
-.hero .eyebrow { display: inline-block; margin-bottom: 12px; font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .75); }
+.hero h1 { font-size: clamp(1.75rem, 3.6vw, 2.5rem); }
+.hero p.lede { margin: 6px 0 18px; max-width: none; font-size: 1.06rem; color: rgba(255, 255, 255, .85); }
+.hero .eyebrow { display: inline-block; margin-bottom: 6px; font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .75); }
 .page-head { margin-bottom: 22px; }
 .page-head .crumbs { font-size: .88rem; color: var(--muted); margin-bottom: 6px; }
 .page-head .crumbs a { color: var(--muted); text-decoration: none; }
@@ -194,11 +194,45 @@ a.chip:hover { border-color: var(--brand); color: var(--brand); }
 }
 .searchbar .field { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 12px; background: var(--surface-2); min-height: 48px; }
 .searchbar .field .icon { color: var(--muted); }
+.searchbar .field { min-width: 0; }
 .searchbar .field.grow { flex: 1 1 240px; }
-.searchbar .field.location { flex: 1 1 200px; }
-.searchbar .field.radius { flex: 0 1 130px; }
-.searchbar input, .searchbar select { border: 0; background: transparent; padding: 0; min-height: 46px; box-shadow: none !important; width: 100%; color: var(--ink); }
-.searchbar input:focus, .searchbar select:focus { outline: none; }
+.searchbar .field.category { flex: 1 1 180px; }
+.searchbar .field.location { flex: 1 1 220px; padding-right: 6px; }
+.searchbar .field.radius { flex: 0 0 116px; }
+.searchbar select { text-overflow: ellipsis; }
+.searchbar .unit { color: var(--muted); font-size: .9rem; }
+.searchbar .locate {
+  display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0;
+  border: 0; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.searchbar .locate:hover { background: var(--surface); color: var(--brand); }
+.searchbar .locate.busy .icon { animation: spin 1s linear infinite; color: var(--brand); }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Wide screens: everything on one row. Fields share the space; the category menu is capped. */
+@media (min-width: 1024px) {
+  .searchbar { flex-wrap: nowrap; }
+  .searchbar .field.grow { flex: 1.3 1 0; }
+  .searchbar .field.category { flex: 0 1 180px; }
+  .searchbar .field.location { flex: 1 1 0; }
+  .searchbar .btn { flex: none; }
+}
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .searchbar { gap: 6px; }
+  .searchbar .field { padding-inline: 10px; gap: 6px; }
+  .searchbar .field.grow { flex-grow: 1.15; }
+  .searchbar .field.category { flex-basis: 164px; }
+  .searchbar .field.category .icon { display: none; }
+  .searchbar .field.radius { flex-basis: 112px; }
+}
+/* Mid-size screens: two even rows (search + category, then location + radius + button). */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .searchbar .field.grow { flex: 1 1 360px; }
+  .searchbar .field.category { flex: 1 1 200px; }
+  .searchbar .field.location { flex: 1 1 260px; }
+}
+/* .field in the selector so this beats the site-wide input[type=…] rule, which has equal specificity and comes later. */
+.searchbar .field input, .searchbar .field select { border: 0; border-radius: 0; background: transparent; padding: 0; min-height: 46px; min-width: 0; box-shadow: none !important; width: 100%; color: var(--ink); }
+.searchbar .field input:focus, .searchbar .field select:focus { outline: none; }
 .searchbar .field:focus-within { box-shadow: 0 0 0 2px var(--brand); }
 .searchbar .btn { min-height: 48px; border-radius: 12px; }
 .search-note { margin: 12px 4px 0; font-size: .9rem; color: var(--muted); }
@@ -412,7 +446,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   .nav { gap: 8px 14px; }
   .nav-links { width: 100%; justify-content: flex-start; }
   .user-chip .name { display: none; }
-  .searchbar .field.radius, .searchbar select { flex: 1 1 140px; }
+  .searchbar .field.radius { flex: 1 1 110px; }
   .searchbar .btn { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) {

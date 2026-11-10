@@ -35,6 +35,7 @@ There is no linter or formatter configured. Settings come from env vars `DJANGO_
 - **Ownership:** edit/delete views only allow the ad's owner and return 404 otherwise. Deleting an account cascades to the user's ads and images.
 - **Frontend:** `static/js/site.js` holds shared behavior (map tile layer, photo lightbox via `[data-lightbox]`, upload previews) and loads after Leaflet. OpenStreetMap tiles must send a Referer (`referrerPolicy: 'strict-origin-when-cross-origin'` on the tile layer) because Django's default same-origin Referrer-Policy otherwise causes 403s. Keep the OSM attribution.
 - `MEDIA_URL` files are served by Django only through `classifieds/urls.py` in development.
+- **Static cache-busting:** `base.html` links `site.css`/`site.js` with `{% versioned_static %}` (`ads/templatetags/assets.py`), which appends `?v=<mtime>`. The dev server sends no Cache-Control, so without it browsers keep showing stale CSS/JS after edits. Use it for any new static asset in templates. Adding a new template tag library needs a dev-server restart (`touch classifieds/settings.py`).
 
 ## Tests
 

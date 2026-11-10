@@ -5,27 +5,30 @@
     <input type="search" name="q" id="id_q" value="{{ form.q.value|default_if_none:'' }}" placeholder="What are you looking for?">
   </label>
   {% if not category and not tag %}
-    <label class="field">
+    <label class="field category">
       <svg class="icon"><use href="#i-grid"/></svg>
       <span class="visually-hidden">Category</span>
       {{ form.category }}
     </label>
   {% endif %}
-  <label class="field location">
+  {# A div, not a label: the field holds a second control (the locate button). #}
+  <div class="field location">
     <svg class="icon"><use href="#i-pin"/></svg>
-    <span class="visually-hidden">Location</span>
+    <label class="visually-hidden" for="id_near">Location</label>
     <input type="text" name="near" id="id_near" maxlength="200" autocomplete="off"
-           value="{{ form.near.value|default_if_none:'' }}" placeholder="City, neighborhood or ZIP">
-  </label>
+           value="{{ form.near.value|default_if_none:'' }}" placeholder="City or ZIP code">
+    <button type="button" class="locate" id="near-me" title="Use my current location">
+      <svg class="icon"><use href="#i-locate"/></svg><span class="visually-hidden">Use my current location</span>
+    </button>
+  </div>
   <label class="field radius">
-    <svg class="icon"><use href="#i-locate"/></svg>
     <span class="visually-hidden">Within (miles)</span>
     <input type="number" name="radius" id="id_radius" min="1" max="12500" step="any"
-           value="{{ form.radius.value|default_if_none:'' }}" placeholder="Radius mi">
+           value="{{ form.radius.value|default_if_none:'' }}" placeholder="Radius">
+    <span class="unit" aria-hidden="true">mi</span>
   </label>
   {{ form.lat }}{{ form.lng }}
-  <button type="button" class="btn secondary" id="near-me"><svg class="icon"><use href="#i-locate"/></svg><span>Near me</span></button>
-  <button class="btn">Search</button>
+  <button class="btn"><svg class="icon"><use href="#i-search"/></svg>Search</button>
 </form>
 {% if form.errors %}
   <ul class="errorlist">{% for field, errs in form.errors.items %}{% for e in errs %}<li>{{ e }}</li>{% endfor %}{% endfor %}</ul>
