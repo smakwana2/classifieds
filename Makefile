@@ -8,7 +8,7 @@ T   ?=
 APP ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help venv install migrate makemigrations seed setup run test shell check clean
+.PHONY: help venv install migrate makemigrations seed seed-demo setup run test shell check clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -29,6 +29,9 @@ makemigrations: ## Create migrations (optionally APP=ads)
 
 seed: ## Seed starter categories (idempotent)
 	$(MANAGE) seed_categories
+
+seed-demo: ## Add demo Bay Area ads with photos (idempotent; FRESH=1 recreates them)
+	$(MANAGE) seed_ads $(if $(FRESH),--fresh)
 
 setup: install migrate seed ## Install, migrate and seed in one go
 

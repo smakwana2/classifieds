@@ -346,3 +346,48 @@ class EditAndImageTests(TestCase):
         # Ad blockers hide images whose URL contains "/ads/".
         image = AdImage.objects.create(ad=self.ad, image=make_image())
         self.assertNotIn('/ads/', image.image.url)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class SeedAdsTests(TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
+
+    def seed(self, *args):
+        call_command('seed_ads', *args, stdout=io.StringIO())
+
+    def test_creates_demo_ads_with_photos_and_locations(self):
+        from .management.commands.seed_ads import DEMO_ADS
+        self.seed()
+        ads = Ad.objects.filter(owner__username='bayarea_demo')
+        self.assertEqual(ads.count(), len(DEMO_ADS))
+        self.assertFalse(User.objects.get(username='bayarea_demo').has_usable_password())
+        self.assertEqual(len({ad.category.parent_id for ad in ads}), len(DEMO_ADS))  # one per top-level category
+        for ad in ads:
+            self.assertTrue(ad.has_coordinates)
+            self.assertGreaterEqual(ad.images.count(), 2, ad.title)
+            for image in ad.images.all():
+                self.assertTrue(os.path.exists(image.image.path))
+                self.assertNotIn('/ads/', image.image.url)  # ad blockers hide those paths
+
+    def test_is_idempotent_and_fresh_recreates(self):
+        self.seed()
+        first_ids = set(Ad.objects.values_list('pk', flat=True))
+        self.seed()
+        self.assertEqual(set(Ad.objects.values_list('pk', flat=True)), first_ids)
+        old_file = AdImage.objects.first().image.path
+        self.seed('--fresh')
+        self.assertEqual(Ad.objects.count(), len(first_ids))
+        self.assertTrue(first_ids.isdisjoint(Ad.objects.values_list('pk', flat=True)))
+        self.assertFalse(os.path.exists(old_file))  # replaced ads' photos are cleaned up
+
+    def test_every_bundled_photo_exists_and_is_credited(self):
+        from .management.commands.seed_ads import DEMO_ADS, PHOTO_DIR
+        credits = (PHOTO_DIR.parent / 'CREDITS.md').read_text()
+        listed = [p for spec in DEMO_ADS for p in spec['photos']]
+        self.assertEqual({p['file'] for p in listed}, {f.name for f in PHOTO_DIR.glob('*.jpg')})
+        for p in listed:
+            self.assertTrue(p['author'] and p['licence'] and p['source'].startswith('https://'), p['file'])
+            self.assertIn(f"`{p['file']}`", credits)

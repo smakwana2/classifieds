@@ -43,6 +43,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_categories     # starter categories and subcategories
+python manage.py seed_ads            # optional: demo ads around the SF Bay Area, with photos
 python manage.py createsuperuser     # optional, for /admin/
 python manage.py runserver
 ```

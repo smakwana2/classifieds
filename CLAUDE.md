@@ -13,6 +13,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_categories     # starter categories/subcategories (idempotent)
+python manage.py seed_ads            # demo Bay Area ads with real photos (idempotent; --fresh recreates)
 python manage.py runserver
 
 python manage.py test                                    # all tests
@@ -34,6 +35,7 @@ There is no linter or formatter configured. Settings come from env vars `DJANGO_
 - **Images:** max `AdImage.MAX_PER_AD` (3) per ad, 5 MB each; the limit counts existing minus removed plus added images. Files are deleted by a `post_delete` signal on `AdImage`, so they're cleaned up on cascaded deletes (ad or user deletion) too. Uploads are stored under `media/listings/`, **never under a path containing `/ads/`** — ad blockers hide those images (a test enforces this).
 - **Ownership:** edit/delete views only allow the ad's owner and return 404 otherwise. Deleting an account cascades to the user's ads and images.
 - **Frontend:** `static/js/site.js` holds shared behavior (map tile layer, photo lightbox via `[data-lightbox]`, upload previews) and loads after Leaflet. OpenStreetMap tiles must send a Referer (`referrerPolicy: 'strict-origin-when-cross-origin'` on the tile layer) because Django's default same-origin Referrer-Policy otherwise causes 403s. Keep the OSM attribution.
+- **Demo data:** `seed_ads` creates ads owned by `bayarea_demo` (unusable password; delete the user to remove them) from `DEMO_ADS`, using photos bundled in `ads/seed_data/photos/`. Demo photos must be real, freely licensed photos of the item, never generated placeholders, and each must be credited in `ads/seed_data/CREDITS.md` (a test enforces this).
 - `MEDIA_URL` files are served by Django only through `classifieds/urls.py` in development.
 - **Static cache-busting:** `base.html` links `site.css`/`site.js` with `{% versioned_static %}` (`ads/templatetags/assets.py`), which appends `?v=<mtime>`. The dev server sends no Cache-Control, so without it browsers keep showing stale CSS/JS after edits. Use it for any new static asset in templates. Adding a new template tag library needs a dev-server restart (`touch classifieds/settings.py`).
 
