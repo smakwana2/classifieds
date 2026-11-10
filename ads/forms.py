@@ -1,6 +1,7 @@
 from django import forms
 from django.utils.text import slugify
 
+from .geocoding import GeocodingUnavailable, geocode
 from .models import Ad, AdImage, Category, Tag
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -116,6 +117,24 @@ class SearchForm(forms.Form):
         required=False,
         empty_label='All categories',
     )
+    near = forms.CharField(label='Location', required=False, max_length=200)
     lat = forms.FloatField(required=False, min_value=-90, max_value=90, widget=forms.HiddenInput)
     lng = forms.FloatField(required=False, min_value=-180, max_value=180, widget=forms.HiddenInput)
-    radius = forms.FloatField(label='Within (km)', required=False, min_value=1, max_value=20000)
+    radius = forms.FloatField(label='Within (miles)', required=False, min_value=1, max_value=12500)
+
+    def clean(self):
+        """A typed location wins over lat/lng; it is geocoded into lat/lng and a display name."""
+        cleaned = super().clean()
+        near = cleaned.get('near', '').strip()
+        cleaned['place_name'] = None
+        if near:
+            try:
+                place = geocode(near)
+            except GeocodingUnavailable:
+                self.add_error('near', 'Location search is unavailable right now. Please try again shortly.')
+                return cleaned
+            if place is None:
+                self.add_error('near', f'Couldn\u2019t find \u201c{near}\u201d. Try a city, neighborhood or ZIP code.')
+                return cleaned
+            cleaned['lat'], cleaned['lng'], cleaned['place_name'] = place.latitude, place.longitude, place.name
+        return cleaned

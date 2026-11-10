@@ -8,7 +8,7 @@ A simple classified-ads site built with Python and Django.
 - **Browse ads**: latest ads, full-text search, pagination
 - **Categories and subcategories**: browsing a category includes its subcategories' ads
 - **Tags**: comma-separated tags on each ad, with a page per tag and a popular-tags list
-- **Geolocation**: pick a spot on a map (or use your browser's location) when posting; find ads near you within a radius, sorted by distance; each ad shows a map
+- **Geolocation**: pick a spot on a map (or use your browser's location) when posting; find ads near you or near any place you type (city, neighborhood or ZIP code, looked up with OpenStreetMap) within a radius in miles, sorted by distance; each ad shows a map
 - **User accounts**: sign up, log in and log out
 - **Delete your account** (password confirmation; deletes all your ads too)
 - **Delete your ads** (owners only)

@@ -2,15 +2,19 @@ import io
 import os
 import shutil
 import tempfile
+from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
+from . import geocoding
+from .geocoding import GeocodingUnavailable, Place
 from .models import Ad, AdImage, Category, Tag
 
 
@@ -52,8 +56,14 @@ class AdTestCase(TestCase):
         response = self.client.get(reverse('ads:list'), near)
         self.assertContains(response, 'Road bike')
         self.assertNotContains(response, 'Paris scooter')
-        response = self.client.get(reverse('ads:list'), {**near, 'radius': 500})
+        # London to Paris is ~213 miles (~344 km), so 250 only includes it if the radius is in miles.
+        response = self.client.get(reverse('ads:list'), {**near, 'radius': 250})
         self.assertContains(response, 'Paris scooter')
+        self.assertContains(response, 'mi away')
+        self.assertNotContains(response, 'km away')
+
+    def test_distance_is_in_miles(self):
+        self.assertAlmostEqual(self.ad.distance_miles(48.8566, 2.3522), 213.5, delta=1)
 
     def test_post_ad_requires_login(self):
         response = self.client.get(reverse('ads:create'))
@@ -107,6 +117,113 @@ def make_image(name='photo.png'):
     buffer = io.BytesIO()
     Image.new('RGB', (10, 10), 'teal').save(buffer, 'PNG')
     return SimpleUploadedFile(name, buffer.getvalue(), content_type='image/png')
+
+
+OAKLAND = Place(37.8044, -122.2714, 'Oakland, Alameda County, California')
+
+
+class LocationSearchTests(TestCase):
+    """Search by a typed location name; the geocoder is mocked so no network is used."""
+
+    def setUp(self):
+        user = User.objects.create_user('carol', password='pw-12345!')
+        cat = Category.objects.create(name='For Sale')
+        Ad.objects.create(owner=user, title='Berkeley lamp', description='x', category=cat,
+                          latitude=37.8716, longitude=-122.2727)  # ~4.7 mi from Oakland
+        Ad.objects.create(owner=user, title='San Jose desk', description='x', category=cat,
+                          latitude=37.3382, longitude=-121.8863)  # ~38 mi from Oakland
+
+    def search(self, **params):
+        return self.client.get(reverse('ads:list'), params)
+
+    @mock.patch('ads.forms.geocode', return_value=OAKLAND)
+    def test_location_and_radius(self, geocode):
+        response = self.search(near='Oakland, CA', radius=10)
+        geocode.assert_called_once_with('Oakland, CA')
+        self.assertContains(response, 'Berkeley lamp')
+        self.assertNotContains(response, 'San Jose desk')
+        self.assertContains(response, 'Showing ads within 10 mi of')
+        self.assertContains(response, '<strong>Oakland, Alameda County, California</strong>')
+        self.assertContains(response, 'value="Oakland, CA"')  # the field keeps what was typed
+
+    @mock.patch('ads.forms.geocode', return_value=OAKLAND)
+    def test_location_without_radius_sorts_by_distance(self, geocode):
+        content = self.search(near='Oakland').content.decode()
+        self.assertLess(content.index('Berkeley lamp'), content.index('San Jose desk'))
+
+    @mock.patch('ads.forms.geocode', return_value=OAKLAND)
+    def test_typed_location_overrides_coordinates(self, geocode):
+        # Coordinates for London, but the typed location (Oakland) should win.
+        response = self.search(near='Oakland', lat=51.5, lng=-0.12, radius=10)
+        self.assertContains(response, 'Berkeley lamp')
+
+    @mock.patch('ads.forms.geocode', return_value=None)
+    def test_unknown_location(self, geocode):
+        response = self.search(near='Nowhereville', radius=10)
+        self.assertContains(response, 'find \u201cNowhereville\u201d')
+        self.assertContains(response, 'San Jose desk')  # no location filter applied
+
+    @mock.patch('ads.forms.geocode', side_effect=GeocodingUnavailable('timeout'))
+    def test_geocoder_unavailable(self, geocode):
+        response = self.search(near='Oakland')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Location search is unavailable')
+
+
+class GeocodeTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def fake_response(self, payload):
+        response = mock.MagicMock()
+        response.__enter__.return_value = io.BytesIO(payload.encode())
+        return response
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_result_is_parsed_and_cached(self, urlopen):
+        urlopen.return_value = self.fake_response(
+            '[{"lat": "37.80", "lon": "-122.27", "display_name": "Oakland, Alameda County, California, United States"}]')
+        place = geocoding.geocode('  Oakland,   CA ')
+        self.assertEqual(place, Place(37.80, -122.27, 'Oakland, Alameda County, California'))
+        self.assertEqual(geocoding.geocode('oakland, ca'), place)  # cached: no second request
+        self.assertEqual(urlopen.call_count, 1)
+        request = urlopen.call_args[0][0]
+        self.assertIn('q=Oakland%2C+CA', request.full_url)
+        self.assertIn('addressdetails=1', request.full_url)
+        self.assertNotIn('countrycodes', request.full_url)
+        self.assertIn('classifieds-django-app', request.get_header('User-agent'))
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_place_preferred_over_business(self, urlopen):
+        urlopen.return_value = self.fake_response('''[
+            {"lat": "37.1", "lon": "-122.1", "category": "amenity", "display_name": "Cafe Mission, 1 Main St"},
+            {"lat": "37.76", "lon": "-122.42", "category": "place", "display_name": "Mission, San Francisco, California, 94110"}]''')
+        self.assertEqual(geocoding.geocode('Mission'), Place(37.76, -122.42, 'Mission, San Francisco, California'))
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_business_only_shows_area_name(self, urlopen):
+        urlopen.return_value = self.fake_response('''[{"lat": "37.77", "lon": "-122.41", "category": "amenity",
+            "display_name": "Revel - Mission District, 199, Erie Street, Mission, San Francisco",
+            "address": {"amenity": "Revel - Mission District", "road": "Erie Street", "neighbourhood": "Mission",
+                        "city": "San Francisco", "state": "California", "country": "United States"}}]''')
+        place = geocoding.geocode('Mission District, San Francisco')
+        self.assertEqual(place, Place(37.77, -122.41, 'Mission, San Francisco, California'))
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_zip_code_is_looked_up_in_the_us(self, urlopen):
+        urlopen.return_value = self.fake_response('[]')
+        geocoding.geocode('94301')
+        self.assertIn('countrycodes=us', urlopen.call_args[0][0].full_url)
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_no_match_returns_none(self, urlopen):
+        urlopen.return_value = self.fake_response('[]')
+        self.assertIsNone(geocoding.geocode('Nowhereville'))
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen', side_effect=geocoding.urllib.error.URLError('down'))
+    def test_network_error_raises(self, urlopen):
+        with self.assertRaises(GeocodingUnavailable):
+            geocoding.geocode('Oakland')
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())

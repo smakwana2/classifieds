@@ -11,11 +11,17 @@
       {{ form.category }}
     </label>
   {% endif %}
-  <label class="field radius">
+  <label class="field location">
     <svg class="icon"><use href="#i-pin"/></svg>
-    <span class="visually-hidden">Within (km)</span>
-    <input type="number" name="radius" id="id_radius" min="1" max="20000" step="any"
-           value="{{ form.radius.value|default_if_none:'' }}" placeholder="Radius km">
+    <span class="visually-hidden">Location</span>
+    <input type="text" name="near" id="id_near" maxlength="200" autocomplete="off"
+           value="{{ form.near.value|default_if_none:'' }}" placeholder="City, neighborhood or ZIP">
+  </label>
+  <label class="field radius">
+    <svg class="icon"><use href="#i-locate"/></svg>
+    <span class="visually-hidden">Within (miles)</span>
+    <input type="number" name="radius" id="id_radius" min="1" max="12500" step="any"
+           value="{{ form.radius.value|default_if_none:'' }}" placeholder="Radius mi">
   </label>
   {{ form.lat }}{{ form.lng }}
   <button type="button" class="btn secondary" id="near-me"><svg class="icon"><use href="#i-locate"/></svg><span>Near me</span></button>
@@ -26,7 +32,10 @@
 {% endif %}
 {% if origin or filtered %}
   <p class="search-note">
-    {% if origin %}Showing ads with a location, nearest first.{% else %}Showing filtered results.{% endif %}
+    {% if origin %}
+      {% if radius %}Showing ads within {{ radius|floatformat:"-1" }} mi of{% else %}Showing ads nearest to{% endif %}
+      {% if place_name %}<strong>{{ place_name }}</strong>{% else %}your location{% endif %}{% if radius %}, nearest first{% else %} first{% endif %}.
+    {% else %}Showing filtered results.{% endif %}
     <a href="{{ request.path }}">Clear search</a>
   </p>
 {% endif %}

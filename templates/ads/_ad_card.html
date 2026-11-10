@@ -8,7 +8,7 @@
     <h3><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h3>
     <div class="meta-row">
       {% if ad.location_name %}<span><svg class="icon"><use href="#i-pin"/></svg>{{ ad.location_name }}</span>{% endif %}
-      {% if ad.distance is not None %}<span>{{ ad.distance|floatformat:1 }} km away</span>{% endif %}
+      {% if ad.distance is not None %}<span>{{ ad.distance|floatformat:1 }} mi away</span>{% endif %}
       <span><svg class="icon"><use href="#i-clock"/></svg>{{ ad.created_at|timesince }} ago</span>
     </div>
     {% if ad.tags.all %}

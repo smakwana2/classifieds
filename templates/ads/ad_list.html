@@ -66,16 +66,21 @@
 
 {% block scripts %}
 <script>
+document.getElementById('id_near').addEventListener('input', function () {
+  document.getElementById('id_lat').value = '';
+  document.getElementById('id_lng').value = '';
+});
 document.getElementById('near-me').addEventListener('click', function () {
   const btn = this;
   const label = btn.querySelector('span');
   if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
   label.textContent = 'Locating…';
   navigator.geolocation.getCurrentPosition(function (pos) {
+    document.getElementById('id_near').value = '';
     document.getElementById('id_lat').value = pos.coords.latitude.toFixed(6);
     document.getElementById('id_lng').value = pos.coords.longitude.toFixed(6);
     const radius = document.getElementById('id_radius');
-    if (!radius.value) radius.value = 25;
+    if (!radius.value) radius.value = 15;
     btn.form.submit();
   }, function () {
     label.textContent = 'Near me';

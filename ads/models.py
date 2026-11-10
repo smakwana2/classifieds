@@ -114,11 +114,11 @@ class Ad(models.Model):
     def has_coordinates(self):
         return self.latitude is not None and self.longitude is not None
 
-    def distance_km(self, lat, lng):
-        """Great-circle (haversine) distance from this ad to (lat, lng), or None."""
+    def distance_miles(self, lat, lng):
+        """Great-circle (haversine) distance in miles from this ad to (lat, lng), or None."""
         if not self.has_coordinates:
             return None
-        r = 6371.0
+        r = 3958.8  # mean Earth radius in miles
         phi1, phi2 = math.radians(self.latitude), math.radians(lat)
         dphi = math.radians(lat - self.latitude)
         dlmb = math.radians(lng - self.longitude)

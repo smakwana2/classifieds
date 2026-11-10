@@ -15,6 +15,7 @@ def _render_ad_list(request, ads, heading, extra=None):
     form = SearchForm(request.GET or None)
     ads = ads.select_related('category__parent', 'owner').prefetch_related('tags', 'images')
     origin = None
+    place_name = radius = None
 
     if form.is_valid():
         q = form.cleaned_data['q']
@@ -28,12 +29,13 @@ def _render_ad_list(request, ads, heading, extra=None):
         lat, lng, radius = (form.cleaned_data[k] for k in ('lat', 'lng', 'radius'))
         if lat is not None and lng is not None:
             origin = (lat, lng)
+            place_name = form.cleaned_data['place_name']
 
     if origin:
         # Distance filtering is done in Python so this works on any database.
         results = []
         for ad in ads.exclude(latitude=None).exclude(longitude=None):
-            ad.distance = ad.distance_km(*origin)
+            ad.distance = ad.distance_miles(*origin)
             if not radius or ad.distance <= radius:
                 results.append(ad)
         results.sort(key=lambda a: a.distance)
@@ -47,8 +49,10 @@ def _render_ad_list(request, ads, heading, extra=None):
         'form': form,
         'heading': heading,
         'origin': origin,
+        'place_name': place_name,
+        'radius': radius,
         'querystring': query.urlencode(),
-        'filtered': any(request.GET.get(k) for k in ('q', 'category', 'lat', 'radius')),
+        'filtered': any(request.GET.get(k) for k in ('q', 'category', 'near', 'lat', 'radius')),
         'top_categories': Category.objects.filter(parent=None),
     }
     context.update(extra or {})
