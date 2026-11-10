@@ -15,6 +15,26 @@ A simple classified-ads site built with Python and Django.
 
 Maps use [Leaflet](https://leafletjs.com/) with OpenStreetMap tiles.
 
+## Screenshots
+
+**Home page: search by place name and radius**, nearest first
+
+![Home page with a search for ads within 25 miles of Oakland, CA](docs/screenshots/home-search.png)
+
+**Ad page** with a photo grid (click to open the lightbox) and a map of the location
+
+![Ad page for a Sony A7 III camera with three photos and a map of the Mission District](docs/screenshots/ad-detail.png)
+
+| Browse by category | Posting an ad: drop a pin on the map |
+|---|---|
+| ![Categories page with six categories and their subcategories](docs/screenshots/categories.png) | ![Location step of the post-an-ad form with a pin in Palo Alto](docs/screenshots/post-ad-location.png) |
+
+**On a phone**
+
+<img src="docs/screenshots/mobile-search.png" alt="Home page search on a phone" width="300">
+
+Demo listing photos are from Wikimedia Commons under their own licences, and maps are © OpenStreetMap contributors. See [docs/screenshots/CREDITS.md](docs/screenshots/CREDITS.md).
+
 ## Getting started
 
 ```bash
