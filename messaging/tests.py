@@ -146,6 +146,19 @@ class MessagingTests(TestCase):
         self.buyer.delete()
         self.assertFalse(Conversation.objects.exists())
 
+    def test_inbox_lists_the_most_recent_conversation_first(self):
+        chair = Ad.objects.create(owner=self.outsider, title='Chair', description='x', category=self.ad.category)
+        self.login(self.buyer)
+        self.send_first('About the desk', ad=self.ad)
+        self.send_first('About the chair', ad=chair)
+        desk = Conversation.objects.get(ad=self.ad)
+        self.client.post(desk.get_absolute_url(), {'body': 'One more question about the desk'})
+        titles = [c.ad.title for c in self.client.get(reverse('messaging:inbox')).context['page'].object_list]
+        self.assertEqual(titles, ['Oak desk', 'Chair'])
+        self.client.post(Conversation.objects.get(ad=chair).get_absolute_url(), {'body': 'And the chair?'})
+        titles = [c.ad.title for c in self.client.get(reverse('messaging:inbox')).context['page'].object_list]
+        self.assertEqual(titles, ['Chair', 'Oak desk'])
+
     def test_inbox_query_count_does_not_grow(self):
         def queries():
             with CaptureQueriesContext(connection) as captured:

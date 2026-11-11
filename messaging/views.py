@@ -74,6 +74,8 @@ def inbox(request):
             last_body=Subquery(last.values('body')[:1]),
             last_sender_id=Subquery(last.values('sender_id')[:1]),
         )
+        # Explicit: Django ignores Meta.ordering on queries with aggregates (GROUP BY).
+        .order_by('-last_message_at', '-pk')
     )
     page = Paginator(conversations, INBOX_PAGE_SIZE).get_page(request.GET.get('page'))
     for conversation in page.object_list:
