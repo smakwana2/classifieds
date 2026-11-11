@@ -5,6 +5,8 @@ from .geocoding import GeocodingBusy, GeocodingRateLimited, GeocodingUnavailable
 from .images import MAX_BYTES as MAX_IMAGE_BYTES, validate_upload
 from .models import Ad, AdImage, Category, Tag
 
+MAX_TAGS = 10
+
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -33,7 +35,8 @@ class AdForm(forms.ModelForm):
     tag_names = forms.CharField(
         label='Tags',
         required=False,
-        help_text='Comma-separated, e.g. "vintage, bargain".',
+        max_length=500,
+        help_text=f'Comma-separated, up to {MAX_TAGS}, e.g. "vintage, bargain".',
     )
     images = MultipleImageField(
         required=False,
@@ -89,6 +92,8 @@ class AdForm(forms.ModelForm):
             name = raw.strip().lower()
             if name and slugify(name) and name not in names:
                 names.append(name[:50])
+        if len(names) > MAX_TAGS:
+            raise forms.ValidationError(f'Use at most {MAX_TAGS} tags.')
         return names
 
     def save(self, commit=True):

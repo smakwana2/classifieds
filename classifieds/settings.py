@@ -148,6 +148,10 @@ LOGOUT_REDIRECT_URL = 'ads:list'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# An ad takes at most 3 photos; refuse requests carrying more files than that
+# before they are processed. Also cap the request body at the web server.
+DATA_UPLOAD_MAX_NUMBER_FILES = 3
+
 
 # A reverse proxy in front of Django (nginx, a PaaS router) that sets X-Forwarded-For
 # and X-Forwarded-Proto. Used for HTTPS detection and for per-client rate limits.

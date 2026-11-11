@@ -20,20 +20,32 @@ def client_ip(request):
     return request.META.get('REMOTE_ADDR', '')
 
 
-def allow(scope, ident, limit, period):
-    """Count one hit for (scope, ident); return False once more than `limit` hits fall
-    in the current `period`-second window."""
+def _key(scope, ident, period):
     window = int(time.time() // period)
     digest = hashlib.sha256(f'{scope}:{ident}'.encode()).hexdigest()[:32]
-    key = f'rl:{scope}:{digest}:{window}'
+    return f'rl:{scope}:{digest}:{period}:{window}'
+
+
+def hit(scope, ident, period):
+    """Count one hit for (scope, ident) in the current `period`-second window; return the count."""
+    key = _key(scope, ident, period)
     if cache.add(key, 1, period + 5):
-        return limit >= 1
+        return 1
     try:
-        count = cache.incr(key)
+        return cache.incr(key)
     except ValueError:  # expired between add() and incr()
         cache.set(key, 1, period + 5)
-        count = 1
-    return count <= limit
+        return 1
+
+
+def count(scope, ident, period):
+    """Hits so far in the current window, without adding one."""
+    return cache.get(_key(scope, ident, period), 0)
+
+
+def allow(scope, ident, limit, period):
+    """Count one hit; return False once more than `limit` hits fall in the current window."""
+    return hit(scope, ident, period) <= limit
 
 
 def allow_all(scope, ident, rules):

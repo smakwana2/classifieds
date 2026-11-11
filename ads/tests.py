@@ -388,11 +388,11 @@ class EditAndImageTests(TestCase):
         self.assertContains(self.client.get(ad.get_absolute_url()), ad.images.first().image.url)
 
     def test_more_than_three_images_rejected(self):
+        # Refused before any file is processed (DATA_UPLOAD_MAX_NUMBER_FILES).
         response = self.client.post(reverse('ads:create'), self.form_data(
             title='Chair', images=[make_image() for _ in range(4)],
         ))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'at most 3 images')
+        self.assertEqual(response.status_code, 400)
         self.assertFalse(Ad.objects.filter(title='Chair').exists())
 
     def test_edit_limit_counts_existing_images(self):
@@ -655,4 +655,37 @@ class CorrectnessTests(TestCase):
         User.objects.create_user('bayarea_demo', password='pw-12345!')
         with self.assertRaisesMessage(CommandError, 'real account'):
             call_command('seed_ads', stdout=io.StringIO())
+        self.assertFalse(Ad.objects.exists())
+
+
+class PostingLimitTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user('alice', password='pw-12345!')
+        self.category = Category.objects.create(name='Misc')
+        self.client.login(username='alice', password='pw-12345!')
+
+    def post_ad(self, title='Thing', **data):
+        return self.client.post(reverse('ads:create'), {
+            'title': title, 'description': 'x', 'category': self.category.pk, 'tag_names': '', **data})
+
+    def test_daily_posting_limit(self):
+        with mock.patch('ads.views.ADS_PER_USER_PER_DAY', 2):
+            self.post_ad('One')
+            self.post_ad('Two')
+            response = self.post_ad('Three')
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, 'up to 2 ads a day', status_code=429)
+        self.assertEqual(Ad.objects.count(), 2)
+
+    def test_total_ads_limit(self):
+        with mock.patch('ads.views.MAX_ADS_PER_USER', 1):
+            self.post_ad('One')
+            self.assertContains(self.post_ad('Two'), 'Delete some old ones', status_code=429)
+
+    def test_tag_count_and_description_length_are_capped(self):
+        response = self.post_ad(tag_names=', '.join(f'tag{i}' for i in range(11)))
+        self.assertContains(response, 'at most 10 tags')
+        response = self.post_ad(description='x' * 5001)
+        self.assertContains(response, 'at most 5000 characters')
         self.assertFalse(Ad.objects.exists())

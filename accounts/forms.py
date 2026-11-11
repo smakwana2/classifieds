@@ -1,5 +1,11 @@
+import re
+
 from django import forms
+from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
+
+
+USERNAME_PATTERN = re.compile(r'[A-Za-z0-9_.-]{3,30}')
 
 
 class SignUpForm(UserCreationForm):
@@ -7,6 +13,19 @@ class SignUpForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         fields = ['username', 'email']
+        help_texts = {'username': '3–30 characters: letters, numbers, dots, dashes or underscores.'}
+
+    def clean_username(self):
+        # Plain ASCII names compared without case, so nobody can register a look-alike
+        # of an existing seller ("Alice" vs "alice", or Cyrillic "а" vs Latin "a").
+        username = super().clean_username()
+        if username is None:  # Django already reported an exact duplicate
+            return username
+        if not USERNAME_PATTERN.fullmatch(username):
+            raise forms.ValidationError('Use 3–30 letters, numbers, dots, dashes or underscores.')
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError('A user with that username already exists.')
+        return username
 
 
 class DeleteAccountForm(forms.Form):

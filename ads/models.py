@@ -134,7 +134,7 @@ class Tag(models.Model):
 class Ad(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='ads', on_delete=models.CASCADE)
     title = models.CharField(max_length=150)
-    description = models.TextField()
+    description = models.TextField(max_length=5000)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                 validators=[MinValueValidator(0)])
     category = models.ForeignKey(Category, related_name='ads', on_delete=models.PROTECT)

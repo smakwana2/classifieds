@@ -8,9 +8,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import MAX_RADIUS_MILES, AdForm, SearchForm
 from .models import Ad, Category, Tag, bounding_box, haversine_miles
+from . import ratelimit
 from .ratelimit import client_ip
 
 PAGE_SIZE = 12
+ADS_PER_USER_PER_DAY = 20
+MAX_ADS_PER_USER = 200
 
 
 def _nearest_page(ads, origin, radius, page_number):
@@ -110,11 +113,24 @@ def ad_detail(request, pk):
     return render(request, 'ads/ad_detail.html', {'ad': ad})
 
 
+def _posting_limit_error(user):
+    if ratelimit.count('post-ad', user.pk, 60 * 60 * 24) >= ADS_PER_USER_PER_DAY:
+        return f'You can post up to {ADS_PER_USER_PER_DAY} ads a day. Please try again tomorrow.'
+    if user.ads.count() >= MAX_ADS_PER_USER:
+        return f'You can have up to {MAX_ADS_PER_USER} ads. Delete some old ones to post more.'
+    return None
+
+
 @login_required
 @transaction.atomic
 def ad_create(request):
     form = AdForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
+        limit_error = _posting_limit_error(request.user)
+        if limit_error:
+            form.add_error(None, limit_error)
+            return render(request, 'ads/ad_form.html', {'form': form}, status=429)
+        ratelimit.hit('post-ad', request.user.pk, 60 * 60 * 24)
         ad = form.save(commit=False)
         ad.owner = request.user
         ad.save()
