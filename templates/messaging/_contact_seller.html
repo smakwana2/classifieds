@@ -1,0 +1,19 @@
+<div class="contact" id="contact">
+  {% if not user.is_authenticated %}
+    <a class="btn block" href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}%23contact"><svg class="icon"><use href="#i-chat"/></svg>Log in to message the seller</a>
+  {% elif user.pk == ad.owner_id %}
+    {% if conversation_count %}
+      <a class="btn secondary block" href="{% url 'messaging:inbox' %}"><svg class="icon"><use href="#i-chat"/></svg>{{ conversation_count }} conversation{{ conversation_count|pluralize }} about this ad</a>
+    {% endif %}
+  {% elif conversation %}
+    <a class="btn block" href="{{ conversation.get_absolute_url }}#latest"><svg class="icon"><use href="#i-chat"/></svg>Continue your conversation</a>
+  {% else %}
+    <form method="post" action="{% url 'messaging:start' ad.pk %}" class="contact-form">
+      {% csrf_token %}
+      <label for="contact-body">Message {{ ad.owner.username }}</label>
+      <textarea id="contact-body" name="body" rows="3" maxlength="2000" required>Hi! Is “{{ ad.title }}” still available?</textarea>
+      <button class="btn block"><svg class="icon"><use href="#i-chat"/></svg>Send message</button>
+      <small class="muted">Your username is shown to the seller; your email isn't.</small>
+    </form>
+  {% endif %}
+</div>

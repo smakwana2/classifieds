@@ -11,6 +11,8 @@
           <a href="{{ image.image.url }}" class="photo" data-lightbox data-index="{{ forloop.counter0 }}">
             <img src="{{ image.image.url }}" alt="{{ ad.title }}, photo {{ forloop.counter }} of {{ images|length }}">
           </a>
+        {% elif link == 'none' %}
+          <span class="photo"><img src="{{ image.thumb_url }}" alt="" loading="lazy"></span>
         {% else %}
           <a href="{{ ad.get_absolute_url }}" class="photo" tabindex="-1">
             <img src="{{ image.thumb_url }}" alt="" loading="lazy">
@@ -18,6 +20,8 @@
         {% endif %}
       {% endfor %}
     </div>
+  {% elif link == 'none' %}
+    <span class="photo-grid photos-0"><svg class="icon"><use href="#i-photo"/></svg><span>No photos</span></span>
   {% elif size != 'large' %}
     <a href="{{ ad.get_absolute_url }}" class="photo-grid photos-0" tabindex="-1">
       <svg class="icon"><use href="#i-photo"/></svg><span>No photos</span>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load messaging_tags %}
 {% block title %}{{ ad.title }} · Classifieds{% endblock %}
 {% block content %}
 <header class="detail-head">
@@ -43,6 +44,7 @@
         <span class="avatar lg">{{ ad.owner.username|slice:":1" }}</span>
         <div><strong>{{ ad.owner.username }}</strong><small>Member since {{ ad.owner.date_joined|date:"F Y" }}</small></div>
       </div>
+      {% contact_seller ad %}
       {% if user == ad.owner %}
         <div class="owner-actions">
           <a class="btn secondary" href="{% url 'ads:edit' ad.pk %}"><svg class="icon"><use href="#i-edit"/></svg>Edit this ad</a>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ other.username }} · Messages · Classifieds{% endblock %}
+{% block content %}
+<div class="conversation-shell">
+  <header class="page-head">
+    <div class="crumbs"><a href="{% url 'messaging:inbox' %}">← All messages</a></div>
+    <h1>{{ other.username }}</h1>
+    <p class="muted page-sub">
+      {% if user.pk == conversation.seller_id %}Interested in your ad{% else %}About{% endif %}
+      <a href="{{ conversation.ad.get_absolute_url }}">{{ conversation.ad.title }}</a>
+    </p>
+  </header>
+
+  <ol class="thread" aria-label="Messages">
+    {% for message in thread %}
+      <li class="bubble{% if message.sender_id == user.pk %} mine{% endif %}"{% if forloop.last %} id="latest"{% endif %}>
+        <div class="body">{{ message.body|linebreaksbr }}</div>
+        <small class="muted">
+          {% if message.sender_id == user.pk %}You{% else %}{{ message.sender.username }}{% endif %} · {{ message.created_at|date:"M j, g:i a" }}
+          {% if message.sender_id == user.pk and forloop.last and message.read_at %} · Seen{% endif %}
+        </small>
+      </li>
+    {% endfor %}
+  </ol>
+
+  <form method="post" class="reply-form panel">
+    {% csrf_token %}
+    {% include "_field.html" with field=form.body %}
+    <button class="btn"><svg class="icon"><use href="#i-chat"/></svg>Send</button>
+  </form>
+</div>
+{% endblock %}

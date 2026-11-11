@@ -12,6 +12,7 @@ A simple classified-ads site built with Python and Django.
 - **User accounts**: sign up, log in and log out
 - **Delete your account** (password confirmation; deletes all your ads too)
 - **Delete your ads** (owners only)
+- **Messages**: buyers message sellers from an ad page; both get an inbox with unread counts and a private conversation per ad. Emails are never shown.
 
 Maps use [Leaflet](https://leafletjs.com/) with OpenStreetMap tiles.
 

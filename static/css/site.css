@@ -480,3 +480,38 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .mb-28 { margin-bottom: 28px; }
 .price-big.price-request { font-size: 1.4rem; }
 .ink { color: var(--ink); }
+
+/* Messaging */
+.badge {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px;
+  border-radius: 999px; background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700; line-height: 1;
+}
+.contact { margin-top: 16px; }
+.contact-form { display: grid; gap: 8px; }
+.contact-form label { font-weight: 600; font-size: .92rem; }
+.contact-form small { font-size: .8rem; }
+.conversation-row { color: inherit; text-decoration: none; }
+.conversation-row:hover { border-color: var(--brand); }
+.conversation-row h3 { font-size: 1rem; margin-bottom: 4px; }
+.conversation-row .preview { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.conversation-row.unread h3, .conversation-row.unread .preview { color: var(--ink); font-weight: 600; }
+.conversation-meta { display: grid; justify-items: end; gap: 6px; font-size: .85rem; white-space: nowrap; }
+.conversation-shell { max-width: 760px; margin: 0 auto; }
+.thread { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 12px; }
+.bubble { max-width: min(80%, 560px); justify-self: start; display: grid; gap: 4px; }
+.bubble .body {
+  padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm); overflow-wrap: anywhere;
+}
+.bubble.mine { justify-self: end; justify-items: end; }
+.bubble.mine .body { background: var(--brand); color: var(--on-brand); border-color: transparent; border-radius: 16px 16px 4px 16px; }
+.bubble small { font-size: .78rem; padding: 0 4px; }
+.bubble#latest { scroll-margin-top: 45vh; }  /* jump to the newest message with earlier ones above it */
+.reply-form { display: grid; gap: 4px; justify-items: start; }
+.reply-form .form-field { width: 100%; }
+@media (max-width: 640px) {
+  .conversation-row { grid-template-columns: 64px minmax(0, 1fr); }
+  .conversation-row .photo-grid { width: 64px; }
+  .conversation-meta { grid-column: 2; justify-items: start; grid-auto-flow: column; }
+  .bubble { max-width: 92%; }
+}

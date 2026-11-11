@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Messages · Classifieds{% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1>Messages</h1>
+  <p class="muted page-sub">Conversations with buyers and sellers about ads.</p>
+</header>
+
+{% if page.object_list %}
+  <div class="list">
+    {% for c in page.object_list %}
+      <a class="list-item conversation-row{% if c.unread %} unread{% endif %}" href="{{ c.get_absolute_url }}#latest">
+        {% with ad=c.ad %}{% include "ads/_photo_grid.html" with link="none" %}{% endwith %}
+        <div class="conversation-summary">
+          <h3>{{ c.other.username }} <span class="muted">· {{ c.ad.title }}</span></h3>
+          <p class="preview">{% if c.last_sender_id == user.pk %}You: {% endif %}{{ c.last_body|truncatechars:120 }}</p>
+        </div>
+        <div class="conversation-meta">
+          <span class="muted">{{ c.last_message_at|naturaltime }}</span>
+          {% if c.unread %}<span class="badge" aria-label="{{ c.unread }} unread">{{ c.unread }}</span>{% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+  {% if page.has_other_pages %}
+    <nav class="pagination" aria-label="Pages">
+      {% if page.has_previous %}<a class="btn secondary small" href="?page={{ page.previous_page_number }}">← Previous</a>{% endif %}
+      <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a class="btn secondary small" href="?page={{ page.next_page_number }}">Next →</a>{% endif %}
+    </nav>
+  {% endif %}
+{% else %}
+  <div class="empty">
+    <span class="big" aria-hidden="true">💬</span>
+    <h2>No messages yet</h2>
+    <p>When you message a seller, or a buyer messages you about one of your ads, it shows up here.</p>
+    <a class="btn" href="{% url 'ads:list' %}">Browse ads</a>
+  </div>
+{% endif %}
+{% endblock %}
