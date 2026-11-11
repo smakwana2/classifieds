@@ -32,7 +32,7 @@
         <div class="thumbs" style="margin:0 0 18px">
           {% for image in ad.images.all %}
             <div class="thumb">
-              <img src="{{ image.image.url }}" alt="">
+              <img src="{{ image.thumb_url }}" alt="">
               <label class="remove-toggle">
                 <input type="checkbox" name="remove_images" value="{{ image.pk }}"
                   {% if image.pk|stringformat:"s" in form.remove_images.value %}checked{% endif %}> Remove
@@ -56,7 +56,7 @@
 
     <section class="form-section">
       <h2><span class="step">3</span>Location</h2>
-      <p class="hint">Helps nearby buyers find you. Click the map to drop a pin.</p>
+      <p class="hint">Helps nearby buyers find you. Click the map to drop a pin. The pin is public, so it's rounded to about 100 m; drop it near your area rather than on your front door.</p>
       {% include "_field.html" with field=form.location_name %}
       <div class="map-toolbar">
         <span class="form-label" style="margin:0">Map pin <span class="optional">optional</span></span>

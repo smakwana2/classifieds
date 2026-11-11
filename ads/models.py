@@ -2,12 +2,15 @@ import math
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils.text import slugify
 
+# Coordinates are stored and shown rounded to 3 decimals (about 100 m), so an ad's
+# public map pin never reveals a seller's exact address.
+COORD_DECIMALS = 3
 
 CATEGORY_ICONS = {
     'for-sale': '🛍️',
@@ -107,6 +110,13 @@ class Ad(models.Model):
     def __str__(self):
         return self.title
 
+    def save(self, *args, **kwargs):
+        if self.latitude is not None:
+            self.latitude = round(self.latitude, COORD_DECIMALS)
+        if self.longitude is not None:
+            self.longitude = round(self.longitude, COORD_DECIMALS)
+        super().save(*args, **kwargs)
+
     def get_absolute_url(self):
         return reverse('ads:detail', args=[self.pk])
 
@@ -131,6 +141,7 @@ class AdImage(models.Model):
 
     ad = models.ForeignKey(Ad, related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='listings/%Y/%m/')
+    thumbnail = models.ImageField(upload_to='listings/%Y/%m/', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -139,8 +150,21 @@ class AdImage(models.Model):
     def __str__(self):
         return self.image.name
 
+    @classmethod
+    def create_from_file(cls, ad, fileobj):
+        """Store a photo for an ad, re-encoded without metadata and with a thumbnail."""
+        from .images import process
+        photo, thumb = process(fileobj)
+        return cls.objects.create(ad=ad, image=photo, thumbnail=thumb)
+
+    @property
+    def thumb_url(self):
+        return (self.thumbnail or self.image).url
+
 
 @receiver(post_delete, sender=AdImage)
-def delete_image_file(sender, instance, **kwargs):
+def delete_image_files(sender, instance, **kwargs):
     # Runs for cascaded deletes too (deleting an ad or a user), unlike Model.delete().
-    instance.image.delete(save=False)
+    # Files go only once the transaction commits, so a rolled-back delete keeps its photos.
+    files = [(f.storage, f.name) for f in (instance.image, instance.thumbnail) if f]
+    transaction.on_commit(lambda: [storage.delete(name) for storage, name in files])

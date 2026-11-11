@@ -119,10 +119,17 @@ class AdTestCase(TestCase):
         self.assertEqual(Tag.objects.create(name='Like New').slug, 'like-new')
 
 
-def make_image(name='photo.png'):
+def make_image(name='photo.png', fmt='PNG', size=(10, 10), **save_args):
     buffer = io.BytesIO()
-    Image.new('RGB', (10, 10), 'teal').save(buffer, 'PNG')
-    return SimpleUploadedFile(name, buffer.getvalue(), content_type='image/png')
+    Image.new('RGB', size, 'teal').save(buffer, fmt, **save_args)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type=f'image/{fmt.lower()}')
+
+
+def jpeg_with_gps(name='IMG_1234_home.jpg'):
+    exif = Image.Exif()
+    exif[0x010F] = 'PhoneMaker'  # camera make
+    exif[0x8825] = {1: 'N', 2: (37.0, 46.0, 30.0), 3: 'W', 4: (122.0, 25.0, 10.0)}  # GPS IFD
+    return make_image(name, 'JPEG', size=(50, 40), exif=exif)
 
 
 OAKLAND = Place(37.8044, -122.2714, 'Oakland, Alameda County, California')
@@ -322,11 +329,24 @@ class EditAndImageTests(TestCase):
         self.assertFalse(Ad.objects.filter(title='Chair').exists())
 
     def test_deleting_ad_deletes_image_files(self):
+        image = AdImage.create_from_file(self.ad, make_image())
+        paths = [image.image.path, image.thumbnail.path]
+        self.assertTrue(all(os.path.exists(p) for p in paths))
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('ads:delete', args=[self.ad.pk]))
+        self.assertFalse(any(os.path.exists(p) for p in paths))
+
+    def test_files_survive_a_rolled_back_delete(self):
+        from django.db import transaction
         image = AdImage.objects.create(ad=self.ad, image=make_image())
-        path = image.image.path
-        self.assertTrue(os.path.exists(path))
-        self.client.post(reverse('ads:delete', args=[self.ad.pk]))
-        self.assertFalse(os.path.exists(path))
+        with self.captureOnCommitCallbacks(execute=True):
+            try:
+                with transaction.atomic():
+                    image.delete()
+                    raise RuntimeError('boom')
+            except RuntimeError:
+                pass
+        self.assertTrue(os.path.exists(image.image.path))
 
     def test_photo_grids_show_every_photo(self):
         images = [AdImage.objects.create(ad=self.ad, image=make_image()) for _ in range(3)]
@@ -378,7 +398,8 @@ class SeedAdsTests(TestCase):
         self.seed()
         self.assertEqual(set(Ad.objects.values_list('pk', flat=True)), first_ids)
         old_file = AdImage.objects.first().image.path
-        self.seed('--fresh')
+        with self.captureOnCommitCallbacks(execute=True):
+            self.seed('--fresh')
         self.assertEqual(Ad.objects.count(), len(first_ids))
         self.assertTrue(first_ids.isdisjoint(Ad.objects.values_list('pk', flat=True)))
         self.assertFalse(os.path.exists(old_file))  # replaced ads' photos are cleaned up
@@ -391,3 +412,84 @@ class SeedAdsTests(TestCase):
         for p in listed:
             self.assertTrue(p['author'] and p['licence'] and p['source'].startswith('https://'), p['file'])
             self.assertIn(f"`{p['file']}`", credits)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class PhotoPrivacyTests(TestCase):
+    """Uploads are re-encoded: no metadata, random names, size caps, thumbnails."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.user = User.objects.create_user('alice', password='pw-12345!')
+        self.category = Category.objects.create(name='Furniture')
+        self.client.login(username='alice', password='pw-12345!')
+
+    def post(self, **data):
+        base = {'title': 'Chair', 'description': 'x', 'category': self.category.pk, 'tag_names': ''}
+        base.update(data)
+        return self.client.post(reverse('ads:create'), base)
+
+    def test_upload_metadata_is_stripped_and_name_randomised(self):
+        upload = jpeg_with_gps()
+        self.assertIn(0x8825, Image.open(io.BytesIO(upload.read())).getexif())  # the fixture has GPS
+        upload.seek(0)
+        self.post(images=[upload])
+        image = Ad.objects.get(title='Chair').images.get()
+        for field in (image.image, image.thumbnail):
+            with Image.open(field.path) as stored:
+                self.assertEqual(stored.format, 'JPEG')
+                self.assertEqual(len(stored.getexif()), 0)
+                self.assertNotIn('icc_profile', stored.info)
+            self.assertNotIn('IMG_1234', field.name)
+        self.assertNotIn('IMG_1234', self.client.get(image.ad.get_absolute_url()).content.decode())
+
+    def test_large_photos_are_resized_and_listings_use_thumbnails(self):
+        self.post(images=[make_image('big.png', size=(3000, 1500))])
+        image = Ad.objects.get(title='Chair').images.get()
+        with Image.open(image.image.path) as stored:
+            self.assertEqual(max(stored.size), 2000)
+        with Image.open(image.thumbnail.path) as thumb:
+            self.assertEqual(max(thumb.size), 640)
+        home = self.client.get(reverse('ads:list')).content.decode()
+        self.assertIn(image.thumbnail.url, home)
+        self.assertNotIn(f'src="{image.image.url}"', home)
+
+    def test_only_jpeg_png_and_webp_are_accepted(self):
+        response = self.post(images=[make_image('photo.png', 'GIF')])  # a GIF named .png
+        self.assertContains(response, 'not a JPG, PNG or WebP photo')
+        self.assertFalse(Ad.objects.exists())
+        self.post(images=[make_image('ok.webp', 'WEBP')])
+        self.assertEqual(Ad.objects.get().images.count(), 1)
+
+    def test_oversized_file_rejected_before_parsing(self):
+        big = SimpleUploadedFile('huge.jpg', b'x' * (5 * 1024 * 1024 + 1), content_type='image/jpeg')
+        self.assertContains(self.post(images=[big]), 'larger than 5 MB')
+        self.assertFalse(Ad.objects.exists())
+
+    def test_too_many_pixels_rejected(self):
+        with mock.patch('ads.images.MAX_PIXELS', 50):
+            response = self.post(images=[make_image(size=(10, 10))])
+        self.assertContains(response, 'is too large')
+        self.assertFalse(Ad.objects.exists())
+
+    def test_coordinates_are_rounded(self):
+        self.post(latitude='37.774929', longitude='-122.419416')
+        ad = Ad.objects.get()
+        self.assertEqual((ad.latitude, ad.longitude), (37.775, -122.419))
+        self.assertContains(self.client.get(ad.get_absolute_url()), 'data-lat="37.775000"')
+
+    def test_reprocess_command_cleans_old_uploads(self):
+        ad = Ad.objects.create(owner=self.user, title='Old', description='x', category=self.category)
+        old = AdImage.objects.create(ad=ad, image=jpeg_with_gps())
+        old_path = old.image.path
+        with self.captureOnCommitCallbacks(execute=True):
+            call_command('reprocess_images', stdout=io.StringIO())
+        old.refresh_from_db()
+        self.assertTrue(old.thumbnail)
+        self.assertFalse(os.path.exists(old_path))
+        with Image.open(old.image.path) as stored:
+            self.assertEqual(len(stored.getexif()), 0)

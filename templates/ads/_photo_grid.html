@@ -13,7 +13,7 @@
           </a>
         {% else %}
           <a href="{{ ad.get_absolute_url }}" class="photo" tabindex="-1">
-            <img src="{{ image.image.url }}" alt="" loading="lazy">
+            <img src="{{ image.thumb_url }}" alt="" loading="lazy">
           </a>
         {% endif %}
       {% endfor %}

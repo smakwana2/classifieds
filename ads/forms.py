@@ -2,9 +2,8 @@ from django import forms
 from django.utils.text import slugify
 
 from .geocoding import GeocodingUnavailable, geocode
+from .images import MAX_BYTES as MAX_IMAGE_BYTES, validate_upload
 from .models import Ad, AdImage, Category, Tag
-
-MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -18,7 +17,16 @@ class MultipleImageField(forms.ImageField):
         files = data if isinstance(data, (list, tuple)) else [data] if data else []
         if not files and self.required:
             raise forms.ValidationError(self.error_messages['required'], code='required')
-        return [super(MultipleImageField, self).clean(f, initial) for f in files]
+        # Cheap checks first, so oversized or too many files are never parsed as images.
+        if len(files) > AdImage.MAX_PER_AD:
+            raise forms.ValidationError(f'An ad can have at most {AdImage.MAX_PER_AD} images.')
+        for f in files:
+            if f.size > MAX_IMAGE_BYTES:
+                raise forms.ValidationError(f'“{f.name}” is larger than 5 MB.')
+        cleaned = [super(MultipleImageField, self).clean(f, initial) for f in files]
+        for f in cleaned:
+            validate_upload(f)
+        return cleaned
 
 
 class AdForm(forms.ModelForm):
@@ -30,7 +38,7 @@ class AdForm(forms.ModelForm):
     images = MultipleImageField(
         required=False,
         help_text=f'Up to {AdImage.MAX_PER_AD} images in total, 5 MB each.',
-        widget=MultipleFileInput(attrs={'accept': 'image/*'}),
+        widget=MultipleFileInput(attrs={'accept': 'image/jpeg,image/png,image/webp'}),
     )
     remove_images = forms.ModelMultipleChoiceField(
         queryset=AdImage.objects.none(),
@@ -75,13 +83,6 @@ class AdForm(forms.ModelForm):
             )
         return cleaned
 
-    def clean_images(self):
-        images = self.cleaned_data['images']
-        for image in images:
-            if image.size > MAX_IMAGE_BYTES:
-                raise forms.ValidationError(f'“{image.name}” is larger than 5 MB.')
-        return images
-
     def clean_tag_names(self):
         names = []
         for raw in self.cleaned_data['tag_names'].split(','):
@@ -107,7 +108,7 @@ class AdForm(forms.ModelForm):
         for image in self.cleaned_data.get('remove_images') or []:
             image.delete()
         for upload in self.cleaned_data['images']:
-            AdImage.objects.create(ad=ad, image=upload)
+            AdImage.create_from_file(ad, upload)
 
 
 class SearchForm(forms.Form):
