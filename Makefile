@@ -3,6 +3,10 @@ PYTHON := $(VENV)/bin/python
 PIP    := $(VENV)/bin/pip
 MANAGE := $(PYTHON) manage.py
 
+# Local development runs with DEBUG on; settings refuse to start without
+# DJANGO_SECRET_KEY otherwise. Override with `make run DJANGO_DEBUG=0`.
+export DJANGO_DEBUG ?= 1
+
 # Optional arguments, e.g. `make test T=ads.tests.AdTestCase` or `make makemigrations APP=ads`
 T   ?=
 APP ?=

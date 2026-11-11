@@ -11,6 +11,7 @@ A classified-ads site built with Django 5.2 (SQLite, Pillow for images). Two app
 ```bash
 source .venv/bin/activate
 pip install -r requirements.txt
+export DJANGO_DEBUG=1                # local development; settings refuse to start otherwise
 python manage.py migrate
 python manage.py seed_categories     # starter categories/subcategories (idempotent)
 python manage.py seed_ads            # demo Bay Area ads with real photos (idempotent; --fresh recreates)
@@ -23,7 +24,7 @@ python manage.py test ads.tests.AdTestCase.test_search   # one test
 python manage.py makemigrations ads
 ```
 
-There is no linter or formatter configured. Settings come from env vars `DJANGO_SECRET_KEY`, `DJANGO_DEBUG` (default `1`) and `DJANGO_ALLOWED_HOSTS`.
+There is no linter or formatter configured. Settings come from env vars (see README "Deploying"). They **fail safe**: `DJANGO_DEBUG` defaults to `0`, and without DEBUG a `DJANGO_SECRET_KEY` is required, so run `export DJANGO_DEBUG=1` before using `manage.py` locally (the Makefile does this for you; `manage.py test` works either way). With DEBUG off, HTTPS redirect, HSTS and secure cookies are on.
 
 ## Architecture
 
