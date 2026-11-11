@@ -42,8 +42,10 @@
   color-scheme: light;
 }
 
+/* Dark theme: used when the visitor picks it (data-theme="dark" on <html>, saved in the
+   `theme` cookie), or follows the system setting until they pick one. Keep both blocks equal. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #111513;
     --surface: #1a201d;
     --surface-2: #222a26;
@@ -66,6 +68,30 @@
     --shadow-lg: 0 18px 40px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #111513;
+  --surface: #1a201d;
+  --surface-2: #222a26;
+  --ink: #ecefe9;
+  --ink-2: #c9cfca;
+  --muted: #949d98;
+  --line: #2c3530;
+  --brand: #4fb89b;
+  --brand-hover: #67c9ad;
+  --brand-soft: #1e3a32;
+  --on-brand: #0c1a16;
+  --accent: #ff8a6b;
+  --danger: #f97066;
+  --danger-soft: #3a1d1b;
+  --on-danger: #2a0b08;  /* the dark-mode red is light, so its text is dark */
+  --hero-from: #0d3d34;
+  --hero-to: #15584a;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, .35);
+  --shadow-lg: 0 18px 40px rgba(0, 0, 0, .5);
+  color-scheme: dark;
 }
 
 /* ==========================================================================
@@ -536,3 +562,14 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .consent .checkbox input { width: 18px; height: 18px; min-height: 0; margin-top: 3px; flex: none; accent-color: var(--brand); }
 .hint.notice { font-size: .86rem; margin-top: 4px; }
 .footer-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+
+/* Theme switch (header) */
+.theme-toggle { margin: 0; display: inline-flex; }
+.theme-toggle button {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.theme-toggle button:hover { border-color: var(--brand); color: var(--brand); }
+.theme-toggle .icon { width: 18px; height: 18px; }
+.theme-toggle .when-dark, .theme-toggle [data-current="dark"] .when-light { display: none; }
+.theme-toggle [data-current="dark"] .when-dark { display: block; }

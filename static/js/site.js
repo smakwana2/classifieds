@@ -157,3 +157,37 @@ function addBaseLayer(map) {
     });
   });
 })();
+
+// Theme switch: flip light/dark instantly and remember it in the `theme` cookie, which the
+// server reads to render <html data-theme> on the next page (see classifieds/theme.py).
+(function () {
+  const form = document.querySelector('.theme-toggle');
+  if (!form) return;
+  const button = form.querySelector('button');
+  const root = document.documentElement;
+  const system = window.matchMedia('(prefers-color-scheme: dark)');
+  const colors = { light: '#0f5c4d', dark: '#111513' };
+  const current = () => root.dataset.theme || (system.matches ? 'dark' : 'light');
+
+  function render() {
+    const theme = current();
+    const next = theme === 'dark' ? 'light' : 'dark';
+    button.value = next;
+    button.dataset.current = theme;
+    button.setAttribute('aria-label', `Switch to ${next} theme`);
+    button.title = `Switch to ${next} theme`;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = colors[theme];
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const theme = button.value;
+    root.dataset.theme = theme;
+    const secure = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+    render();
+  });
+  system.addEventListener('change', render);
+  render();
+})();

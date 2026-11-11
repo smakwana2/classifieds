@@ -111,12 +111,14 @@
 
   <section id="cookies">
     <h2>5. Cookies and tracking</h2>
-    <p>We use only two cookies, both needed for the site to work:</p>
+    <p>We use at most three cookies. Two are needed for the site to work; the third is set only if you choose a
+      theme:</p>
     <table>
       <thead><tr><th scope="col">Cookie</th><th scope="col">Purpose</th><th scope="col">Lasts</th></tr></thead>
       <tbody>
         <tr><td><code>sessionid</code></td><td>Keeps you logged in</td><td>{{ session_days }} days, or until you log out</td></tr>
         <tr><td><code>csrftoken</code></td><td>Protects forms from being submitted by other websites</td><td>{{ csrf_days }} days</td></tr>
+        <tr><td><code>theme</code></td><td>Remembers whether you chose the light or dark theme (only set when you use the theme switch)</td><td>{{ theme_days }} days</td></tr>
       </tbody>
     </table>
     <p>There are no analytics, advertising or social-media trackers, and we don't track you across other

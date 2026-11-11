@@ -69,3 +69,40 @@ class SecurityHeaderTests(SimpleTestCase):
                 self.assertNotRegex(html, r'\son[a-z]+="', 'inline event handler')
                 # Assets (scripts, styles, images, fonts) must be self-hosted; plain links are fine.
                 self.assertIsNone(re.search(r'(\bsrc="https?://|<link\b[^>]*\bhref="https?://)', html))
+
+
+class ThemeTests(SimpleTestCase):
+    def test_no_choice_follows_the_system_setting(self):
+        html = self.client.get('/accounts/login/').content.decode()
+        self.assertIn('<html lang="en">', html)  # no data-theme: the CSS media query decides
+        self.assertIn('class="theme-toggle"', html)
+
+    def test_saved_choice_is_rendered_on_the_html_element(self):
+        self.client.cookies['theme'] = 'dark'
+        html = self.client.get('/accounts/login/').content.decode()
+        self.assertIn('<html lang="en" data-theme="dark">', html)
+        self.assertIn('<meta name="theme-color" content="#111513">', html)
+        self.assertIn('value="light"', html)  # the switch now offers light
+        self.client.cookies['theme'] = 'purple'  # anything else is ignored
+        self.assertIn('<html lang="en">', self.client.get('/accounts/login/').content.decode())
+
+    def test_switch_saves_the_choice_and_returns_to_the_page(self):
+        response = self.client.post('/theme/', {'theme': 'dark', 'next': '/categories/?x=1'})
+        self.assertRedirects(response, '/categories/?x=1', fetch_redirect_response=False)
+        cookie = response.cookies['theme']
+        self.assertEqual((cookie.value, cookie['samesite'], cookie['max-age']), ('dark', 'Lax', 31536000))
+
+    def test_switch_rejects_bad_values_and_outside_redirects(self):
+        response = self.client.post('/theme/', {'theme': 'neon', 'next': 'https://evil.example/'})
+        self.assertRedirects(response, '/', fetch_redirect_response=False)
+        self.assertNotIn('theme', response.cookies)
+        self.assertEqual(self.client.get('/theme/').status_code, 405)
+
+    def test_dark_tokens_are_identical_in_both_css_blocks(self):
+        css = (BASE_DIR / 'static' / 'css' / 'site.css').read_text()
+        import re
+        media = css.split(':root:not([data-theme="light"]) {', 1)[1].split('}', 1)[0]
+        chosen = css.split(':root[data-theme="dark"] {', 1)[1].split('}', 1)[0]
+        tokens = lambda block: re.findall(r'(--[\w-]+|color-scheme):\s*([^;]+);', block)
+        self.assertEqual(tokens(media), tokens(chosen))
+        self.assertGreater(len(tokens(chosen)), 15)

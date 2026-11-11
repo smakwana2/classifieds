@@ -12,6 +12,7 @@ A simple classified-ads site built with Python and Django.
 - **User accounts**: sign up, log in and log out
 - **Delete your account** (password confirmation; deletes all your ads too)
 - **Delete your ads** (owners only)
+- **Light and dark themes**: a switch in the header (sun/moon), remembered in a cookie; until you choose, the site follows your system setting
 - **Privacy Policy and Terms of Use** pages, with a signup consent checkbox (18+) recorded per Terms version; see [docs/compliance.md](docs/compliance.md)
 - **Messages**: buyers message sellers from an ad page; both get an inbox with unread counts and a private conversation per ad. Emails are never shown.
 
