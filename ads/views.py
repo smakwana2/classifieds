@@ -168,4 +168,5 @@ def ad_delete(request, pk):
 @login_required
 def my_ads(request):
     ads = request.user.ads.select_related('category__parent').prefetch_related('images')
-    return render(request, 'ads/my_ads.html', {'ads': ads})
+    page = Paginator(ads, PAGE_SIZE).get_page(request.GET.get('page'))
+    return render(request, 'ads/my_ads.html', {'page': page})

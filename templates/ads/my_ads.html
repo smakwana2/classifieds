@@ -4,14 +4,14 @@
 <header class="page-head section-head">
   <div>
     <h1>My ads</h1>
-    <p class="muted page-sub">{{ ads|length }} listing{{ ads|length|pluralize }}</p>
+    <p class="muted page-sub">{{ page.paginator.count }} listing{{ page.paginator.count|pluralize }}</p>
   </div>
   <a class="btn" href="{% url 'ads:create' %}"><svg class="icon"><use href="#i-plus"/></svg>Post an ad</a>
 </header>
 
-{% if ads %}
+{% if page.object_list %}
   <div class="list">
-    {% for ad in ads %}
+    {% for ad in page.object_list %}
       <div class="list-item">
         {% include "ads/_photo_grid.html" %}
         <div>
@@ -29,6 +29,13 @@
       </div>
     {% endfor %}
   </div>
+  {% if page.has_other_pages %}
+    <nav class="pagination" aria-label="Pages">
+      {% if page.has_previous %}<a class="btn secondary small" href="?page={{ page.previous_page_number }}">← Previous</a>{% endif %}
+      <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a class="btn secondary small" href="?page={{ page.next_page_number }}">Next →</a>{% endif %}
+    </nav>
+  {% endif %}
 {% else %}
   <div class="empty">
     <span class="big" aria-hidden="true">📦</span>

@@ -2,6 +2,7 @@ import re
 
 from django import forms
 from django.contrib.auth.models import User
+from django.utils.safestring import mark_safe
 from django.contrib.auth.forms import UserCreationForm
 
 
@@ -14,6 +15,12 @@ class SignUpForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         fields = ['username', 'email']
         help_texts = {'username': '3–30 characters: letters, numbers, dots, dashes or underscores.'}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Django's password rules come as an HTML list; it's Django's own text, so it's
+        # trusted here. Every other help text is escaped by templates/_field.html.
+        self.fields['password1'].help_text = mark_safe(str(self.fields['password1'].help_text))
 
     def clean_username(self):
         # Plain ASCII names compared without case, so nobody can register a look-alike

@@ -80,7 +80,7 @@ The app is ready for a public deployment once these are in place:
 
 1. **Settings:** set `DJANGO_SECRET_KEY` (e.g. `python -c "import secrets; print(secrets.token_urlsafe(50))"`), `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`, and leave `DJANGO_DEBUG` unset. Run `python manage.py check --deploy`.
 2. **Database and photos:** `python manage.py migrate`, then `python manage.py reprocess_images` once if the database has photos uploaded before metadata stripping existed.
-3. **Static files:** `python manage.py collectstatic` and serve `staticfiles/` at `/static/`. Everything (Leaflet, fonts) is self-hosted.
+3. **Static files:** `python manage.py collectstatic` and serve `staticfiles/` at `/static/` with a long cache lifetime: in production, file names include a content hash (`site.b512ad0df5b7.css`), so updates always get new URLs. Everything (Leaflet, fonts) is self-hosted.
 4. **Uploaded photos:** Django does not serve `/media/` outside debug mode. Serve `media/` from the web server (or object storage) as static files only, with `X-Content-Type-Options: nosniff`, ideally from a separate cookieless domain.
 5. **App server:** run gunicorn (or similar) behind nginx or a platform router over HTTPS, with `DJANGO_BEHIND_PROXY=1`. Cap request bodies at the proxy (e.g. nginx `client_max_body_size 20m;`).
 6. **Cache:** the default file cache is shared by all processes on one machine. With several machines, set `DJANGO_REDIS_URL` so rate limits and the geocoding throttle are shared.

@@ -689,3 +689,104 @@ class PostingLimitTests(TestCase):
         response = self.post_ad(description='x' * 5001)
         self.assertContains(response, 'at most 5000 characters')
         self.assertFalse(Ad.objects.exists())
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class ReviewFollowUpTests(TestCase):
+    """Behaviour the code review asked to have covered by tests."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user('alice', password='pw-12345!')
+        self.other = User.objects.create_user('bob', password='pw-12345!')
+        self.parent = Category.objects.create(name='For Sale')
+        self.category = Category.objects.create(name='Furniture', parent=self.parent)
+        self.client.login(username='alice', password='pw-12345!')
+
+    def make_ads(self, count, owner=None, **fields):
+        owner = owner or self.user
+        ads = []
+        for i in range(count):
+            ad = Ad.objects.create(owner=owner, title=f'{owner.username} ad {i}', description='x',
+                                   category=self.category, latitude=37.80, longitude=-122.27, **fields)
+            ad.tags.add(Tag.objects.get_or_create(name='wood')[0])
+            AdImage.create_from_file(ad, make_image())
+            ads.append(ad)
+        return ads
+
+    def test_removing_a_photo_on_edit_deletes_its_files(self):
+        ad = self.make_ads(1)[0]
+        image = ad.images.get()
+        paths = [image.image.path, image.thumbnail.path]
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(reverse('ads:edit', args=[ad.pk]), {
+                'title': ad.title, 'description': 'x', 'category': self.category.pk, 'tag_names': '',
+                'remove_images': [image.pk]})
+        self.assertRedirects(response, ad.get_absolute_url())
+        self.assertFalse(ad.images.exists())
+        self.assertFalse(any(os.path.exists(p) for p in paths))
+
+    def test_deleting_an_account_deletes_its_photo_files(self):
+        paths = [p for ad in self.make_ads(2) for i in ad.images.all() for p in (i.image.path, i.thumbnail.path)]
+        keep = self.make_ads(1, owner=self.other)[0].images.get().image.path
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('delete_account'), {'password': 'pw-12345!'})
+        self.assertFalse(any(os.path.exists(p) for p in paths))
+        self.assertTrue(os.path.exists(keep))  # other people's photos are untouched
+
+    def test_my_ads_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('ads:my_ads'))
+        self.assertRedirects(response, f"{reverse('login')}?next={reverse('ads:my_ads')}")
+
+    def test_my_ads_shows_only_your_own_ads_a_page_at_a_time(self):
+        self.make_ads(13)
+        self.make_ads(1, owner=self.other)
+        first = self.client.get(reverse('ads:my_ads'))
+        self.assertContains(first, '13 listings')
+        self.assertNotContains(first, 'bob ad')
+        self.assertEqual(len(first.context['page'].object_list), 12)
+        self.assertContains(first, 'href="?page=2"')
+        second = self.client.get(reverse('ads:my_ads'), {'page': 2})
+        self.assertEqual([ad.title for ad in second.context['page'].object_list], ['alice ad 0'])
+
+    def count_queries(self, url, params=None):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as queries:
+            self.assertEqual(self.client.get(url, params or {}).status_code, 200)
+        return len(queries)
+
+    @mock.patch('ads.forms.geocode', return_value=OAKLAND)
+    def test_query_counts_do_not_grow_with_the_number_of_ads(self, geocode):
+        pages = [
+            (reverse('ads:list'), None),
+            (reverse('ads:list'), {'near': 'Oakland', 'radius': 10}),
+            (self.parent.get_absolute_url(), None),
+            (reverse('ads:tag', args=['wood']), None),
+            (reverse('ads:my_ads'), None),
+        ]
+        self.make_ads(3)
+        few = [self.count_queries(url, params) for url, params in pages]
+        self.make_ads(9)
+        many = [self.count_queries(url, params) for url, params in pages]
+        self.assertEqual(few, many)
+
+    def test_help_text_is_escaped_except_djangos_password_rules(self):
+        self.assertContains(self.client.get(reverse('ads:create')), '&quot;vintage, bargain&quot;')
+        self.client.logout()
+        signup = self.client.get(reverse('signup')).content.decode()
+        self.assertIn('<li>Your password can', signup)  # Django's own HTML list renders as a list
+        self.assertNotIn('&lt;li&gt;', signup)
+
+    def test_versioned_static_defers_to_hashed_names_in_production(self):
+        from django.template import Template, Context
+        render = lambda: Template("{% load assets %}{% versioned_static 'css/site.css' %}").render(Context())
+        self.assertRegex(render(), r'site\.css\?v=\d+$')
+        with mock.patch('ads.templatetags.assets.uses_hashed_names', return_value=True):
+            self.assertTrue(render().endswith('/static/css/site.css'))

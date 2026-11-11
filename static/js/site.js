@@ -37,6 +37,14 @@ function addBaseLayer(map) {
     if (e.key === 'Escape') close();
     else if (e.key === 'ArrowLeft') show(index - 1);
     else if (e.key === 'ArrowRight') show(index + 1);
+    else if (e.key === 'Tab') {
+      // Keep keyboard focus inside the open viewer (it's a modal dialog).
+      const buttons = Array.from(box.querySelectorAll('button'));
+      const at = buttons.indexOf(document.activeElement);
+      const next = at === -1 ? 0 : (at + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+      buttons[next].focus();
+      e.preventDefault();
+    }
   }
   function open(i) {
     box = document.createElement('div');
