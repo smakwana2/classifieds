@@ -24,19 +24,29 @@ Maps use [Leaflet](https://leafletjs.com/) with OpenStreetMap tiles.
 
 ![Home page with a search for ads within 25 miles of Oakland, CA](docs/screenshots/home-search.png)
 
-**Ad page** with a photo grid (click to open the lightbox) and a map of the location
+**Ad page** with a photo grid (click to open the viewer), a map, and a box to message the seller
 
-![Ad page for a Sony A7 III camera with three photos and a map of the Mission District](docs/screenshots/ad-detail.png)
+![Ad page for an antique French armchair with two photos and a map of Rockridge, Oakland](docs/screenshots/ad-detail.png)
+
+**Messages between buyers and sellers**: an inbox with unread counts, and a private conversation per ad with read receipts
+
+![Messages inbox with conversations about a kayak and a road bike](docs/screenshots/messages-inbox.png)
+
+![Conversation about a road bike, with the last message marked Seen](docs/screenshots/messages-thread.png)
+
+**Light and dark themes**: the switch in the header remembers your choice
+
+![Home page in the dark theme](docs/screenshots/dark-theme.png)
 
 | Browse by category | Posting an ad: drop a pin on the map |
 |---|---|
-| ![Categories page with six categories and their subcategories](docs/screenshots/categories.png) | ![Location step of the post-an-ad form with a pin in Palo Alto](docs/screenshots/post-ad-location.png) |
+| ![Categories page with six categories and their subcategories](docs/screenshots/categories.png) | ![Location step of the post-an-ad form with a pin in Rockridge, Oakland](docs/screenshots/post-ad-location.png) |
 
 **On a phone**
 
 <img src="docs/screenshots/mobile-search.png" alt="Home page search on a phone" width="300">
 
-Demo listing photos are from Wikimedia Commons under their own licences, and maps are © OpenStreetMap contributors. See [docs/screenshots/CREDITS.md](docs/screenshots/CREDITS.md).
+Listing photos are from Wikimedia Commons under their own licences, and maps are © OpenStreetMap contributors. See [docs/screenshots/CREDITS.md](docs/screenshots/CREDITS.md).
 
 ## Getting started
 
