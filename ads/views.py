@@ -5,43 +5,61 @@ from django.db.models import Count, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import AdForm, SearchForm
-from .models import Ad, Category, Tag
+from .forms import MAX_RADIUS_MILES, AdForm, SearchForm
+from .models import Ad, Category, Tag, bounding_box, haversine_miles
+from .ratelimit import client_ip
 
 PAGE_SIZE = 12
 
 
+def _nearest_page(ads, origin, radius, page_number):
+    """A page of ads within `radius` miles of origin, nearest first.
+
+    The database narrows candidates to a bounding box; exact distances are computed in
+    Python on (id, lat, lng) rows only, so this works on any database. Full ads, with
+    their tags and photos, are then loaded for the current page alone.
+    """
+    lat, lng = origin
+    candidates = ads.exclude(latitude=None).exclude(longitude=None).filter(**bounding_box(lat, lng, radius))
+    rows = []
+    for pk, ad_lat, ad_lng in candidates.values_list('pk', 'latitude', 'longitude'):
+        distance = haversine_miles(lat, lng, ad_lat, ad_lng)
+        if distance <= radius:
+            rows.append((distance, pk))
+    rows.sort()
+    page = Paginator(rows, PAGE_SIZE).get_page(page_number)
+    by_pk = ads.in_bulk([pk for _, pk in page.object_list])
+    page.object_list = [by_pk[pk] for _, pk in page.object_list]
+    for ad, (distance, _) in zip(page.object_list, rows[page.start_index() - 1:]):
+        ad.distance = distance
+    return page
+
+
 def _render_ad_list(request, ads, heading, extra=None):
-    form = SearchForm(request.GET or None)
+    form = SearchForm(request.GET or None, client=client_ip(request))
     ads = ads.select_related('category__parent', 'owner').prefetch_related('tags', 'images')
     origin = None
     place_name = radius = None
 
-    if form.is_valid():
-        q = form.cleaned_data['q']
-        if q:
-            ads = ads.filter(
-                Q(title__icontains=q) | Q(description__icontains=q) | Q(location_name__icontains=q)
-            )
-        category = form.cleaned_data['category']
-        if category:
-            ads = ads.filter(category_id__in=category.self_and_descendant_ids())
-        lat, lng, radius = (form.cleaned_data[k] for k in ('lat', 'lng', 'radius'))
-        if lat is not None and lng is not None:
-            origin = (lat, lng)
-            place_name = form.cleaned_data['place_name']
+    # Text and category filters apply even when another field (e.g. an unknown
+    # location) is invalid, so a failed location lookup never widens the results.
+    valid = form.is_valid()
+    data = getattr(form, 'cleaned_data', {})
+    q = data.get('q')
+    if q:
+        ads = ads.filter(Q(title__icontains=q) | Q(description__icontains=q) | Q(location_name__icontains=q))
+    category = data.get('category')
+    if category:
+        ads = ads.filter(category_id__in=category.self_and_descendant_ids())
+    if valid and data['lat'] is not None and data['lng'] is not None:
+        origin = (data['lat'], data['lng'])
+        place_name = data['place_name']
+        radius = data['radius']
 
     if origin:
-        # Distance filtering is done in Python so this works on any database.
-        results = []
-        for ad in ads.exclude(latitude=None).exclude(longitude=None):
-            ad.distance = ad.distance_miles(*origin)
-            if not radius or ad.distance <= radius:
-                results.append(ad)
-        results.sort(key=lambda a: a.distance)
-        ads = results
-
-    page = Paginator(ads, PAGE_SIZE).get_page(request.GET.get('page'))
+        page = _nearest_page(ads, origin, radius or MAX_RADIUS_MILES, request.GET.get('page'))
+    else:
+        page = Paginator(ads, PAGE_SIZE).get_page(request.GET.get('page'))
     query = request.GET.copy()
     query.pop('page', None)
     context = {
@@ -52,7 +70,9 @@ def _render_ad_list(request, ads, heading, extra=None):
         'place_name': place_name,
         'radius': radius,
         'querystring': query.urlencode(),
-        'filtered': any(request.GET.get(k) for k in ('q', 'category', 'near', 'lat', 'radius')),
+        'filtered': any(request.GET.get(k) for k in ('q', 'category', 'near'))
+                    or bool(request.GET.get('lat') and request.GET.get('lng')),
+        'max_radius': MAX_RADIUS_MILES,
         'top_categories': Category.objects.filter(parent=None),
     }
     context.update(extra or {})

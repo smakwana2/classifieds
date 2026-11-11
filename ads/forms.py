@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.text import slugify
 
-from .geocoding import GeocodingUnavailable, geocode
+from .geocoding import GeocodingBusy, GeocodingRateLimited, GeocodingUnavailable, geocode
 from .images import MAX_BYTES as MAX_IMAGE_BYTES, validate_upload
 from .models import Ad, AdImage, Category, Tag
 
@@ -111,6 +111,9 @@ class AdForm(forms.ModelForm):
             AdImage.create_from_file(ad, upload)
 
 
+MAX_RADIUS_MILES = 500  # also the search area when a location is given without a radius
+
+
 class SearchForm(forms.Form):
     q = forms.CharField(label='Search', required=False)
     category = forms.ModelChoiceField(
@@ -121,7 +124,11 @@ class SearchForm(forms.Form):
     near = forms.CharField(label='Location', required=False, max_length=200)
     lat = forms.FloatField(required=False, min_value=-90, max_value=90, widget=forms.HiddenInput)
     lng = forms.FloatField(required=False, min_value=-180, max_value=180, widget=forms.HiddenInput)
-    radius = forms.FloatField(label='Within (miles)', required=False, min_value=1, max_value=12500)
+    radius = forms.FloatField(label='Within (miles)', required=False, min_value=1, max_value=MAX_RADIUS_MILES)
+
+    def __init__(self, *args, client=None, **kwargs):
+        self.client = client  # who is searching (IP address), for geocoding rate limits
+        super().__init__(*args, **kwargs)
 
     def clean(self):
         """A typed location wins over lat/lng; it is geocoded into lat/lng and a display name."""
@@ -130,7 +137,13 @@ class SearchForm(forms.Form):
         cleaned['place_name'] = None
         if near:
             try:
-                place = geocode(near)
+                place = geocode(near, client=self.client)
+            except GeocodingRateLimited:
+                self.add_error('near', 'You\u2019ve searched for a lot of new places. Please wait a minute and try again.')
+                return cleaned
+            except GeocodingBusy:
+                self.add_error('near', 'Location search is busy right now. Please try again in a few seconds.')
+                return cleaned
             except GeocodingUnavailable:
                 self.add_error('near', 'Location search is unavailable right now. Please try again shortly.')
                 return cleaned

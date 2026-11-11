@@ -23,7 +23,7 @@
   </div>
   <label class="field radius">
     <span class="visually-hidden">Within (miles)</span>
-    <input type="number" name="radius" id="id_radius" min="1" max="12500" step="any"
+    <input type="number" name="radius" id="id_radius" min="1" max="{{ max_radius }}" step="any"
            value="{{ form.radius.value|default_if_none:'' }}" placeholder="Radius">
     <span class="unit" aria-hidden="true">mi</span>
   </label>
@@ -36,8 +36,8 @@
 {% if origin or filtered %}
   <p class="search-note">
     {% if origin %}
-      {% if radius %}Showing ads within {{ radius|floatformat:"-1" }} mi of{% else %}Showing ads nearest to{% endif %}
-      {% if place_name %}<strong>{{ place_name }}</strong>{% else %}your location{% endif %}{% if radius %}, nearest first{% else %} first{% endif %}.
+      Showing ads within {% if radius %}{{ radius|floatformat:"-1" }}{% else %}{{ max_radius }}{% endif %} mi of
+      {% if place_name %}<strong>{{ place_name }}</strong>{% else %}your location{% endif %}, nearest first.
     {% else %}Showing filtered results.{% endif %}
     <a href="{{ request.path }}">Clear search</a>
   </p>

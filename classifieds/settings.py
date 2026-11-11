@@ -149,6 +149,22 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 
+# A reverse proxy in front of Django (nginx, a PaaS router) that sets X-Forwarded-For
+# and X-Forwarded-Proto. Used for HTTPS detection and for per-client rate limits.
+BEHIND_PROXY = os.environ.get('DJANGO_BEHIND_PROXY', '0') == '1'
+
+# The cache holds geocoding results and rate-limit counters, so it must be shared by
+# all server processes: a file cache by default, or set DJANGO_REDIS_URL.
+if TESTING:
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
+elif os.environ.get('DJANGO_REDIS_URL'):
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                          'LOCATION': os.environ['DJANGO_REDIS_URL']}}
+else:
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+                          'LOCATION': os.environ.get('DJANGO_CACHE_DIR', BASE_DIR / '.cache'),
+                          'OPTIONS': {'MAX_ENTRIES': 20000}}}
+
 # HTTPS and cookie hardening, on whenever DEBUG is off.
 # Behind a TLS-terminating proxy, set DJANGO_BEHIND_PROXY=1 so Django trusts its
 # X-Forwarded-Proto header (only if the proxy always sets or overwrites it).
@@ -159,7 +175,7 @@ if not (DEBUG or TESTING):
     SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('DJANGO_HSTS_SUBDOMAINS', '0') == '1'
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    if os.environ.get('DJANGO_BEHIND_PROXY', '0') == '1':
+    if BEHIND_PROXY:
         SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 LOGGING = {

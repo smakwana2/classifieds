@@ -11,6 +11,32 @@ from django.utils.text import slugify
 # Coordinates are stored and shown rounded to 3 decimals (about 100 m), so an ad's
 # public map pin never reveals a seller's exact address.
 COORD_DECIMALS = 3
+EARTH_RADIUS_MILES = 3958.8
+
+
+def haversine_miles(lat1, lng1, lat2, lng2):
+    """Great-circle distance in miles between two points."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2
+    return 2 * EARTH_RADIUS_MILES * math.asin(min(1.0, math.sqrt(a)))
+
+
+def bounding_box(lat, lng, miles):
+    """Queryset filters for a box that contains every point within `miles` of (lat, lng).
+
+    Lets the database discard far-away ads before exact distances are computed. Near the
+    poles or across the 180° meridian only latitude is limited, which is still correct.
+    """
+    dlat = miles / 69.0
+    box = {'latitude__gte': lat - dlat, 'latitude__lte': lat + dlat}
+    cos_lat = math.cos(math.radians(lat))
+    if cos_lat > 0.01:
+        dlng = miles / (69.172 * cos_lat)
+        if -180 <= lng - dlng and lng + dlng <= 180:
+            box.update(longitude__gte=lng - dlng, longitude__lte=lng + dlng)
+    return box
 
 CATEGORY_ICONS = {
     'for-sale': '🛍️',
@@ -97,10 +123,10 @@ class Ad(models.Model):
     tags = models.ManyToManyField(Tag, related_name='ads', blank=True)
     location_name = models.CharField('location', max_length=150, blank=True)
     latitude = models.FloatField(
-        null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)]
+        null=True, blank=True, db_index=True, validators=[MinValueValidator(-90), MaxValueValidator(90)]
     )
     longitude = models.FloatField(
-        null=True, blank=True, validators=[MinValueValidator(-180), MaxValueValidator(180)]
+        null=True, blank=True, db_index=True, validators=[MinValueValidator(-180), MaxValueValidator(180)]
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -128,12 +154,7 @@ class Ad(models.Model):
         """Great-circle (haversine) distance in miles from this ad to (lat, lng), or None."""
         if not self.has_coordinates:
             return None
-        r = 3958.8  # mean Earth radius in miles
-        phi1, phi2 = math.radians(self.latitude), math.radians(lat)
-        dphi = math.radians(lat - self.latitude)
-        dlmb = math.radians(lng - self.longitude)
-        a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2
-        return 2 * r * math.asin(math.sqrt(a))
+        return haversine_miles(self.latitude, self.longitude, lat, lng)
 
 
 class AdImage(models.Model):

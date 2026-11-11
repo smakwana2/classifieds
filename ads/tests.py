@@ -2,6 +2,7 @@ import io
 import os
 import shutil
 import tempfile
+import time
 from unittest import mock
 
 from django.conf import settings
@@ -152,7 +153,7 @@ class LocationSearchTests(TestCase):
     @mock.patch('ads.forms.geocode', return_value=OAKLAND)
     def test_location_and_radius(self, geocode):
         response = self.search(near='Oakland, CA', radius=10)
-        geocode.assert_called_once_with('Oakland, CA')
+        geocode.assert_called_once_with('Oakland, CA', client='127.0.0.1')
         self.assertContains(response, 'Berkeley lamp')
         self.assertNotContains(response, 'San Jose desk')
         self.assertContains(response, 'Showing ads within 10 mi of')
@@ -182,10 +183,61 @@ class LocationSearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Location search is unavailable')
 
+    @mock.patch('ads.forms.geocode', side_effect=GeocodingUnavailable('timeout'))
+    def test_failed_location_keeps_the_other_filters(self, geocode):
+        response = self.search(q='lamp', near='Oakland')
+        self.assertContains(response, 'Berkeley lamp')
+        self.assertNotContains(response, 'San Jose desk')
+
+    @mock.patch('ads.forms.geocode', side_effect=geocoding.GeocodingRateLimited('slow down'))
+    def test_rate_limited_message(self, geocode):
+        self.assertContains(self.search(near='Oakland'), 'searched for a lot of new places')
+
+    @mock.patch('ads.forms.geocode', return_value=OAKLAND)
+    def test_radius_is_capped(self, geocode):
+        response = self.search(near='Oakland', radius=5000)
+        self.assertContains(response, 'less than or equal to 500')
+
+    @mock.patch('ads.forms.geocode', return_value=OAKLAND)
+    def test_search_area_and_pages_of_nearest_ads(self, geocode):
+        user = User.objects.first()
+        cat = Category.objects.first()
+        Ad.objects.create(owner=user, title='New York sofa', description='x', category=cat,
+                          latitude=40.71, longitude=-74.0)  # ~2,570 mi away: outside the 500 mi area
+        for i in range(13):  # 13 more ads 0.1 mi apart, heading north from Oakland
+            Ad.objects.create(owner=user, title=f'Item {i:02d}', description='x', category=cat,
+                              latitude=37.8044 + 0.0015 * (i + 1), longitude=-122.2714)
+        first = self.search(near='Oakland')
+        self.assertContains(first, 'Showing ads within 500 mi of')
+        self.assertNotContains(first, 'New York sofa')
+        self.assertEqual(first.context['page'].paginator.count, 15)
+        self.assertEqual([ad.title for ad in first.context['page'].object_list][:2], ['Item 00', 'Item 01'])
+        last = self.search(near='Oakland', page=2).context['page'].object_list
+        self.assertEqual([ad.title for ad in last], ['Item 12', 'Berkeley lamp', 'San Jose desk'])
+        self.assertAlmostEqual(last[-1].distance, 38, delta=1)
+        self.assertContains(first, 'href="?near=Oakland&amp;page=2"')
+
+    def test_pagination_link_without_filters(self):
+        user, cat = User.objects.first(), Category.objects.first()
+        for i in range(12):
+            Ad.objects.create(owner=user, title=f'Extra {i}', description='x', category=cat)
+        self.assertContains(self.search(), 'href="?page=2"')
+
+    def test_client_ip_trusts_forwarded_header_only_behind_proxy(self):
+        from django.test import RequestFactory
+        from .ratelimit import client_ip
+        request = RequestFactory().get('/', REMOTE_ADDR='10.0.0.1', HTTP_X_FORWARDED_FOR='6.6.6.6, 203.0.113.9')
+        self.assertEqual(client_ip(request), '10.0.0.1')
+        with self.settings(BEHIND_PROXY=True):
+            self.assertEqual(client_ip(request), '203.0.113.9')
+
 
 class GeocodeTests(TestCase):
     def setUp(self):
         cache.clear()
+        patcher = mock.patch('ads.geocoding._sleep')  # don't really wait for the next free second
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def fake_response(self, payload):
         response = mock.MagicMock()
@@ -237,6 +289,53 @@ class GeocodeTests(TestCase):
     def test_network_error_raises(self, urlopen):
         with self.assertRaises(GeocodingUnavailable):
             geocoding.geocode('Oakland')
+
+    def test_every_kind_of_failure_is_reported_as_unavailable(self):
+        import http.client
+        failures = [http.client.RemoteDisconnected('closed'), http.client.IncompleteRead(b''), TimeoutError()]
+        for exc in failures:
+            with self.subTest(exc=type(exc).__name__), mock.patch(
+                    'ads.geocoding.urllib.request.urlopen', side_effect=exc):
+                cache.clear()
+                with self.assertRaises(GeocodingUnavailable):
+                    geocoding.geocode('Oakland')
+        for payload in ('{"error": "x"}', '[{"lon": "1"}]', '[{"lat": "north", "lon": "1"}]', 'not json'):
+            with self.subTest(payload=payload), mock.patch('ads.geocoding.urllib.request.urlopen',
+                                                           return_value=self.fake_response(payload)):
+                cache.clear()
+                with self.assertRaises(GeocodingUnavailable):
+                    geocoding.geocode('Oakland')
+
+    @mock.patch('ads.geocoding._reserve_slot')
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_new_lookups_are_rate_limited_per_client(self, urlopen, reserve_slot):
+        urlopen.side_effect = lambda *args, **kwargs: self.fake_response('[]')
+        limit = geocoding.CLIENT_LIMITS[0][0]
+        for i in range(limit):
+            geocoding.geocode(f'place {i}', client='1.2.3.4')
+        with self.assertRaises(geocoding.GeocodingRateLimited):
+            geocoding.geocode('one more place', client='1.2.3.4')
+        geocoding.geocode('place 0', client='1.2.3.4')  # cached answers are always fine
+        self.assertEqual(urlopen.call_count, limit)
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_fails_fast_when_every_slot_is_taken(self, urlopen):
+        now = int(time.time())
+        for second in range(now, now + geocoding.MAX_WAIT_SECONDS + 3):
+            cache.set(f'geocode:slot:{second}', 1)
+        with self.assertRaises(geocoding.GeocodingBusy):
+            geocoding.geocode('Oakland')
+        urlopen.assert_not_called()
+
+    @mock.patch('ads.geocoding.urllib.request.urlopen')
+    def test_requests_are_at_least_a_second_apart(self, urlopen):
+        urlopen.side_effect = lambda *args, **kwargs: self.fake_response('[]')
+        starts = []
+        with mock.patch('ads.geocoding._sleep', side_effect=lambda wait: starts.append(time.time() + wait)):
+            for i in range(3):
+                geocoding.geocode(f'town {i}')
+        self.assertEqual(len(starts), 3)
+        self.assertTrue(all(b - a >= 0.999 for a, b in zip(starts, starts[1:])), starts)
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
