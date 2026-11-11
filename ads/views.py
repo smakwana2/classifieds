@@ -121,8 +121,11 @@ def _posting_limit_error(user):
     return None
 
 
+# Create/edit validate (and re-encode photos) outside any transaction, then save the
+# ad, tags and photos in one short transaction: all or nothing, with the database
+# write lock held only for the writes themselves.
+
 @login_required
-@transaction.atomic
 def ad_create(request):
     form = AdForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
@@ -131,23 +134,24 @@ def ad_create(request):
             form.add_error(None, limit_error)
             return render(request, 'ads/ad_form.html', {'form': form}, status=429)
         ratelimit.hit('post-ad', request.user.pk, 60 * 60 * 24)
-        ad = form.save(commit=False)
-        ad.owner = request.user
-        ad.save()
-        form.save_related(ad)
+        with transaction.atomic():
+            ad = form.save(commit=False)
+            ad.owner = request.user
+            ad.save()
+            form.save_related(ad)
         messages.success(request, 'Your ad has been posted.')
         return redirect(ad)
     return render(request, 'ads/ad_form.html', {'form': form})
 
 
 @login_required
-@transaction.atomic
 def ad_edit(request, pk):
     ad = get_object_or_404(Ad, pk=pk, owner=request.user)
     saved_title = ad.title  # validation updates `ad` in place; the heading should not
     form = AdForm(request.POST or None, request.FILES or None, instance=ad)
     if request.method == 'POST' and form.is_valid():
-        form.save()
+        with transaction.atomic():
+            form.save()
         messages.success(request, 'Your ad has been updated.')
         return redirect(ad)
     return render(request, 'ads/ad_form.html', {'form': form, 'ad': ad, 'saved_title': saved_title})

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load messaging_tags %}
+{% load humanize messaging_tags %}
 {% block title %}{{ ad.title }} · Classifieds{% endblock %}
 {% block content %}
 <header class="detail-head">
@@ -11,7 +11,7 @@
   <h1>{{ ad.title }}</h1>
   <div class="meta-row">
     {% if ad.location_name %}<span><svg class="icon"><use href="#i-pin"/></svg>{{ ad.location_name }}</span>{% endif %}
-    <span><svg class="icon"><use href="#i-clock"/></svg>Posted {{ ad.created_at|timesince }} ago</span>
+    <span><svg class="icon"><use href="#i-clock"/></svg>Posted {{ ad.created_at|naturaltime }}</span>
   </div>
 </header>
 

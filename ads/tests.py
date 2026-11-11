@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
@@ -645,7 +645,7 @@ class CorrectnessTests(TestCase):
         self.assertNotContains(response, 'Edit \u201cNew title\u201d')
 
     def test_failed_photo_save_rolls_back_the_new_ad(self):
-        with mock.patch.object(AdImage, 'create_from_file', side_effect=OSError('disk full')):
+        with mock.patch.object(AdImage, 'create_from_processed', side_effect=OSError('disk full')):
             with self.assertRaises(OSError), self.assertLogs('django.request', 'ERROR'):
                 self.post_ad(images=[make_image()])
         self.assertFalse(Ad.objects.exists())
@@ -790,3 +790,38 @@ class ReviewFollowUpTests(TestCase):
         self.assertRegex(render(), r'site\.css\?v=\d+$')
         with mock.patch('ads.templatetags.assets.uses_hashed_names', return_value=True):
             self.assertTrue(render().endswith('/static/css/site.css'))
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class ConcurrencyTests(TransactionTestCase):
+    """Several people posting at once must not hit SQLite's "database is locked"."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_photos_are_processed_before_the_save_transaction(self):
+        from django.db import connection
+        from . import forms as ad_forms
+        user = User.objects.create_user('alice', password='pw-12345!')
+        category = Category.objects.create(name='Misc')
+        self.client.force_login(user)
+        seen = []
+        real_process = ad_forms.process
+
+        def spy(upload):
+            seen.append(connection.in_atomic_block)
+            return real_process(upload)
+
+        with mock.patch.object(ad_forms, 'process', side_effect=spy):
+            self.client.post(reverse('ads:create'), {
+                'title': 'Chair', 'description': 'x', 'category': category.pk, 'tag_names': '',
+                'images': [make_image(), make_image()]})
+        self.assertEqual(seen, [False, False])
+        self.assertEqual(Ad.objects.get().images.count(), 2)
+
+    def test_sqlite_waits_for_the_write_lock(self):
+        options = settings.DATABASES['default']['OPTIONS']
+        self.assertEqual(options['transaction_mode'], 'IMMEDIATE')
+        self.assertGreaterEqual(options['timeout'], 10)

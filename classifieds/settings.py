@@ -98,6 +98,15 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        # SQLite allows one writer at a time. Taking the write lock when a transaction
+        # starts (IMMEDIATE) makes concurrent writers wait in line (up to `timeout`
+        # seconds) instead of failing with "database is locked"; WAL lets reads continue
+        # during a write.
+        'OPTIONS': {
+            'transaction_mode': 'IMMEDIATE',
+            'timeout': 20,
+            'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;',
+        },
     }
 }
 

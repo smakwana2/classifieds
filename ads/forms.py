@@ -2,7 +2,7 @@ from django import forms
 from django.utils.text import slugify
 
 from .geocoding import GeocodingBusy, GeocodingRateLimited, GeocodingUnavailable, geocode
-from .images import MAX_BYTES as MAX_IMAGE_BYTES, validate_upload
+from .images import MAX_BYTES as MAX_IMAGE_BYTES, process, validate_upload
 from .models import Ad, AdImage, Category, Tag
 
 MAX_TAGS = 10
@@ -86,6 +86,13 @@ class AdForm(forms.ModelForm):
             )
         return cleaned
 
+    def clean_images(self):
+        # Re-encode now, during validation: it's the slow part (seconds for big photos),
+        # and doing it before the save transaction keeps database write locks short.
+        images = self.cleaned_data['images']
+        self.processed_images = [process(upload) for upload in images]
+        return images
+
     def clean_tag_names(self):
         names = []
         for raw in self.cleaned_data['tag_names'].split(','):
@@ -108,8 +115,8 @@ class AdForm(forms.ModelForm):
 
         for image in self.cleaned_data.get('remove_images') or []:
             image.delete()
-        for upload in self.cleaned_data['images']:
-            AdImage.create_from_file(ad, upload)
+        for photo, thumb in self.processed_images:
+            AdImage.create_from_processed(ad, photo, thumb)
 
 
 MAX_RADIUS_MILES = 500  # also the search area when a location is given without a radius

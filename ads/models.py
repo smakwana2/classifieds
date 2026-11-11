@@ -193,7 +193,11 @@ class AdImage(models.Model):
     def create_from_file(cls, ad, fileobj):
         """Store a photo for an ad, re-encoded without metadata and with a thumbnail."""
         from .images import process
-        photo, thumb = process(fileobj)
+        return cls.create_from_processed(ad, *process(fileobj))
+
+    @classmethod
+    def create_from_processed(cls, ad, photo, thumb):
+        """Store a photo that `ads.images.process()` has already re-encoded."""
         return cls.objects.create(ad=ad, image=photo, thumbnail=thumb)
 
     @property
