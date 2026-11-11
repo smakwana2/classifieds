@@ -67,7 +67,11 @@
 <footer class="site-footer">
   <div class="wrap">
     <span>© {% now "Y" %} Classifieds · Buy, sell and find things near you.</span>
-    <span><a href="{% url 'ads:categories' %}">All categories</a></span>
+    <nav class="footer-links" aria-label="Site information">
+      <a href="{% url 'ads:categories' %}">All categories</a>
+      <a href="{% url 'legal:terms' %}">Terms of Use</a>
+      <a href="{% url 'legal:privacy' %}">Privacy Policy</a>
+    </nav>
   </div>
 </footer>
 

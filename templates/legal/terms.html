@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Terms of Use · Classifieds{% endblock %}
+{% block content %}
+<article class="legal">
+  <header class="page-head">
+    <h1>Terms of Use</h1>
+    <p class="muted page-sub">Effective {{ terms_effective|date:"F j, Y" }}</p>
+  </header>
+
+  <p class="lede-small">
+    These terms are an agreement between you and
+    {% if operator %}<strong>{{ operator }}</strong>{% else %}<span class="placeholder">[operator name]</span>{% endif %},
+    who runs Classifieds (“we”, “us”). By creating an account or using the site you agree to them and to our
+    <a href="{% url 'legal:privacy' %}">Privacy Policy</a>. If you don't agree, please don't use the site.
+  </p>
+
+  <section id="eligibility">
+    <h2>1. Who can use Classifieds</h2>
+    <p>You must be at least {{ minimum_age }} years old and able to form a binding contract. You're responsible for
+      your account: keep your password private, and tell us if you think someone else is using it. One person may
+      not run multiple accounts to get around limits or a suspension.</p>
+  </section>
+
+  <section id="role">
+    <h2>2. We're a venue, not a party to your deal</h2>
+    <p>Classifieds lets people post ads and contact each other. We don't own, inspect, sell or deliver anything
+      listed, we don't handle payments, and we aren't part of any agreement between buyers and sellers. We don't
+      check that ads are accurate or that users are who they say they are. Meet in a public place, inspect items
+      before paying, and never send money to someone you haven't met.</p>
+  </section>
+
+  <section id="rules">
+    <h2>3. Rules for ads and messages</h2>
+    <p>You're responsible for what you post and send, and it must be legal, accurate and your own. Don't post or
+      send anything that:</p>
+    <ul>
+      <li>offers anything illegal to sell, or illegal for you to sell, including drugs and drug paraphernalia,
+        prescription medicines, firearms, ammunition and weapon parts, explosives, alcohol and tobacco or vaping
+        products, stolen goods, counterfeit or pirated goods, recalled products, endangered species or their
+        parts, and government IDs or documents;</li>
+      <li>offers sexual services or sexual content, or involves any minor in any way;</li>
+      <li>is a scam, a pyramid or “get rich quick” scheme, or asks for payment up front for something that
+        doesn't exist;</li>
+      <li>harasses, threatens or defames anyone, or promotes hate or violence;</li>
+      <li>contains someone else's personal information, or photos you don't have the right to use;</li>
+      <li>is spam, a duplicate ad, or an ad for something you're not actually offering;</li>
+      <li>contains malware, or tries to break, overload or get around the security of the site.</li>
+    </ul>
+    <p><strong>Housing ads</strong> must comply with the federal Fair Housing Act and California's Fair
+      Employment and Housing Act. Don't state a preference or limitation based on race, color, religion, sex,
+      gender identity or expression, sexual orientation, national origin, ancestry, disability, familial status,
+      marital status, source of income, age, or any other protected characteristic.</p>
+    <p><strong>Job ads</strong> must comply with equal-employment laws: don't state a preference based on a
+      protected characteristic, and follow California's pay-transparency rules where they apply.</p>
+    <p>We may remove any ad or message, and suspend or close any account, that we believe breaks these terms or
+      the law, with or without notice. You can report a problem to us at the contact address below.</p>
+  </section>
+
+  <section id="content">
+    <h2>4. Your content</h2>
+    <p>You keep ownership of the ads, photos and messages you post. So that we can run the site, you give us a
+      non-exclusive, royalty-free, worldwide license to host, store, copy, resize and display that content on
+      Classifieds, for as long as it's on the site. This license ends when you delete the content, except for
+      copies in backups that are deleted on their normal schedule. You confirm that you have the right to post
+      everything you post.</p>
+  </section>
+
+  <section id="copyright">
+    <h2>5. Copyright complaints (DMCA)</h2>
+    <p>We respect copyright. If you believe content on Classifieds infringes your copyright, send a notice to our
+      designated agent with: your signature; a description of the copyrighted work; the URL of the material you
+      want removed; your contact details; a statement that you believe in good faith the use isn't authorized;
+      and a statement, under penalty of perjury, that your notice is accurate and that you're the owner or
+      authorized to act for the owner.</p>
+    <p>Designated agent:
+      {% if dmca_agent %}{{ dmca_agent }}{% else %}<span class="placeholder">[DMCA agent name and address]</span>{% endif %},
+      {% if contact_email %}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}<span class="placeholder">[contact email]</span>{% endif %}.</p>
+    <p>If your content was removed and you believe that was a mistake, you can send a counter-notice to the same
+      agent. We close the accounts of repeat infringers.</p>
+  </section>
+
+  <section id="disclaimers">
+    <h2>6. Disclaimers</h2>
+    <p>The site is provided “as is” and “as available”, without warranties of any kind, whether express or
+      implied, including warranties of merchantability, fitness for a particular purpose and non-infringement. We
+      don't promise that the site will always be available or error-free, or that any ad or user is genuine.</p>
+  </section>
+
+  <section id="liability">
+    <h2>7. Limitation of liability</h2>
+    <p>To the fullest extent the law allows, we aren't liable for any indirect, incidental, special,
+      consequential or punitive damages, or for any loss arising from transactions or contact between users. Our
+      total liability for any claim about the site is limited to $100. Some places don't allow these limits, so
+      they may not all apply to you. Nothing in these terms limits liability that can't be limited by law.</p>
+    <p>If you're a California resident, you waive California Civil Code section 1542, which says: “A general
+      release does not extend to claims that the creditor or releasing party does not know or suspect to exist
+      in his or her favor at the time of executing the release and that, if known by him or her, would have
+      materially affected his or her settlement with the debtor or released party.”</p>
+  </section>
+
+  <section id="indemnity">
+    <h2>8. Your responsibility to us</h2>
+    <p>If someone makes a claim against us because of content you posted, a deal you made, or your breaking
+      these terms or the law, you agree to cover our reasonable losses and costs, including legal fees.</p>
+  </section>
+
+  <section id="ending">
+    <h2>9. Ending your use</h2>
+    <p>You can stop using the site and delete your account at any time. We may suspend or close accounts as
+      described in section 3. Sections 4 (for existing backups), 6, 7, 8 and 10 still apply afterwards.</p>
+  </section>
+
+  <section id="law">
+    <h2>10. Governing law and disputes</h2>
+    <p>These terms are governed by the laws of the State of California and applicable US federal law, without
+      regard to conflict-of-law rules. Any dispute will be handled in the state or federal courts located in
+      California, and you and we consent to their jurisdiction. You may also bring an individual claim in small
+      claims court.</p>
+  </section>
+
+  <section id="changes">
+    <h2>11. Changes to these terms</h2>
+    <p>We may update these terms. We'll post the new version here with a new effective date and, for significant
+      changes, show a notice on the site before they take effect. If you keep using the site after that, you
+      accept the updated terms.</p>
+  </section>
+
+  <section id="contact">
+    <h2>12. Contact</h2>
+    <p>Questions, reports of prohibited ads, or legal notices:
+      {% if contact_email %}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}<span class="placeholder">[contact email]</span>{% endif %}.</p>
+  </section>
+</article>
+{% endblock %}

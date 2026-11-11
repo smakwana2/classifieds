@@ -2,7 +2,12 @@ import re
 
 from django import forms
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.utils.safestring import mark_safe
+
+from legal.policy import MINIMUM_AGE, TERMS_VERSION
+
+from .models import TermsAcceptance
 from django.contrib.auth.forms import UserCreationForm
 
 
@@ -11,6 +16,11 @@ USERNAME_PATTERN = re.compile(r'[A-Za-z0-9_.-]{3,30}')
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=False)
+    accept_terms = forms.BooleanField(
+        required=True,
+        error_messages={'required': f'You must be {MINIMUM_AGE} or older and agree to the Terms of Use and '
+                                    'Privacy Policy to create an account.'},
+    )
 
     class Meta(UserCreationForm.Meta):
         fields = ['username', 'email']
@@ -21,6 +31,13 @@ class SignUpForm(UserCreationForm):
         # Django's password rules come as an HTML list; it's Django's own text, so it's
         # trusted here. Every other help text is escaped by templates/_field.html.
         self.fields['password1'].help_text = mark_safe(str(self.fields['password1'].help_text))
+
+    @transaction.atomic
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        if commit:
+            TermsAcceptance.objects.create(user=user, version=TERMS_VERSION)
+        return user
 
     def clean_username(self):
         # Plain ASCII names compared without case, so nobody can register a look-alike

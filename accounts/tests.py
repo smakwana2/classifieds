@@ -13,7 +13,7 @@ class AccountTests(TestCase):
     def test_signup_logs_user_in(self):
         response = self.client.post(reverse('signup'), {
             'username': 'carol', 'email': 'carol@example.com',
-            'password1': 'Sup3r-secret-pw', 'password2': 'Sup3r-secret-pw',
+            'password1': 'Sup3r-secret-pw', 'password2': 'Sup3r-secret-pw', 'accept_terms': 'on',
         })
         self.assertRedirects(response, reverse('ads:list'))
         self.assertTrue(User.objects.filter(username='carol').exists())
@@ -65,7 +65,7 @@ class AbuseProtectionTests(TestCase):
 
     def signup(self, username):
         return self.client.post(reverse('signup'), {
-            'username': username, 'password1': 'Sup3r-secret-pw', 'password2': 'Sup3r-secret-pw'})
+            'username': username, 'password1': 'Sup3r-secret-pw', 'password2': 'Sup3r-secret-pw', 'accept_terms': 'on'})
 
     def test_signups_are_limited_per_ip(self):
         for i in range(5):
@@ -81,3 +81,47 @@ class AbuseProtectionTests(TestCase):
 
     def test_password_reset_is_not_offered(self):
         self.assertEqual(self.client.get('/accounts/password_reset/').status_code, 404)
+
+
+class LegalTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_signup_requires_accepting_terms_and_records_it(self):
+        from accounts.models import TermsAcceptance
+        from legal.policy import TERMS_VERSION
+        data = {'username': 'gina', 'password1': 'Sup3r-secret-pw', 'password2': 'Sup3r-secret-pw'}
+        response = self.client.post(reverse('signup'), data)
+        self.assertContains(response, 'You must be 18 or older and agree')
+        self.assertFalse(User.objects.filter(username='gina').exists())
+        self.client.post(reverse('signup'), {**data, 'accept_terms': 'on'})
+        acceptance = TermsAcceptance.objects.get(user__username='gina')
+        self.assertEqual(acceptance.version, TERMS_VERSION)
+
+    def test_privacy_and_terms_pages(self):
+        privacy = self.client.get(reverse('legal:privacy'))
+        terms = self.client.get(reverse('legal:terms'))
+        for page in (privacy, terms):
+            self.assertEqual(page.status_code, 200)
+            self.assertContains(page, '[contact email]')  # placeholders until the operator is configured
+        self.assertContains(privacy, 'We do not sell your personal information')
+        self.assertContains(privacy, '<code>sessionid</code>')
+        self.assertContains(terms, 'Fair Housing Act')
+        self.assertContains(terms, 'DMCA')
+        home = self.client.get(reverse('ads:list'))
+        self.assertContains(home, f'href="{reverse("legal:privacy")}"')
+        self.assertContains(home, f'href="{reverse("legal:terms")}"')
+
+    def test_operator_details_appear_when_configured(self):
+        with self.settings(SITE_OPERATOR='Bay Classifieds LLC', SITE_CONTACT_EMAIL='privacy@bay.example',
+                           DMCA_AGENT='Jane Doe, 1 Main St, Oakland, CA'):
+            page = self.client.get(reverse('legal:terms'))
+        self.assertContains(page, 'Bay Classifieds LLC')
+        self.assertContains(page, 'mailto:privacy@bay.example')
+        self.assertNotContains(page, 'class="placeholder"')
+
+    def test_deploy_check_warns_until_operator_is_configured(self):
+        from legal.checks import operator_details_configured
+        self.assertEqual([w.id for w in operator_details_configured(None)], ['legal.W001'])
+        with self.settings(SITE_OPERATOR='x', SITE_CONTACT_EMAIL='x@example.com', DMCA_AGENT='x'):
+            self.assertEqual(operator_details_configured(None), [])

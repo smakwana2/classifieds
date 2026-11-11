@@ -67,4 +67,5 @@ class SecurityHeaderTests(SimpleTestCase):
                 self.assertNotRegex(html, r'<script(?![^>]*\bsrc=)[^>]*>', 'inline <script>')
                 self.assertNotIn('style="', html)
                 self.assertNotRegex(html, r'\son[a-z]+="', 'inline event handler')
-                self.assertIsNone(re.search(r'(src|href)="https?://(?!www\.openstreetmap\.org)', html))
+                # Assets (scripts, styles, images, fonts) must be self-hosted; plain links are fine.
+                self.assertIsNone(re.search(r'(\bsrc="https?://|<link\b[^>]*\bhref="https?://)', html))

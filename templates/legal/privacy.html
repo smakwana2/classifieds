@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy · Classifieds{% endblock %}
+{% block content %}
+<article class="legal">
+  <header class="page-head">
+    <h1>Privacy Policy</h1>
+    <p class="muted page-sub">Effective {{ privacy_effective|date:"F j, Y" }}</p>
+  </header>
+
+  <p class="lede-small">
+    This policy explains what information Classifieds collects, how we use it, who we share it with, and the
+    choices and rights you have. Classifieds is run by
+    {% if operator %}<strong>{{ operator }}</strong>{% else %}<span class="placeholder">[operator name]</span>{% endif %}
+    (“we”, “us”). In short: we collect only what the site needs to work, we don't sell or share your personal
+    information, and there are no ads, analytics or tracking.
+  </p>
+
+  <nav class="toc" aria-label="On this page">
+    <ol>
+      <li><a href="#collect">Information we collect</a></li>
+      <li><a href="#use">How we use it</a></li>
+      <li><a href="#public">What other people can see</a></li>
+      <li><a href="#share">Who we share it with</a></li>
+      <li><a href="#cookies">Cookies and tracking</a></li>
+      <li><a href="#retention">How long we keep it</a></li>
+      <li><a href="#choices">Your choices</a></li>
+      <li><a href="#california">Your California privacy rights</a></li>
+      <li><a href="#children">Children</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+      <li><a href="#contact">Contact us</a></li>
+    </ol>
+  </nav>
+
+  <section id="collect">
+    <h2>1. Information we collect</h2>
+    <h3>Information you give us</h3>
+    <ul>
+      <li><strong>Account:</strong> your username, password and, if you choose to give it, your email address.
+        We store your password only in a scrambled (hashed) form that we can't read. We also record when you
+        joined and when you accepted our Terms of Use.</li>
+      <li><strong>Ads:</strong> the title, description, price, category, tags, location name and photos you
+        post, and the map pin if you add one.</li>
+      <li><strong>Messages:</strong> the messages you send to other users, when they were sent, and whether they
+        have been read.</li>
+    </ul>
+    <h3>Information collected automatically</h3>
+    <ul>
+      <li><strong>Location, only when you ask for it.</strong> If you click “Use my location” or the locate button
+        in the search bar, your browser asks your permission and then shares your position with the page. We
+        round it to about 100 meters before using it. When you post an ad, the rounded pin is saved with the ad;
+        when you search, it is used for that search and not saved to your account. You can always type a place
+        name instead.</li>
+      <li><strong>Photos are cleaned.</strong> Photos taken on phones usually contain hidden data, including the
+        GPS position where they were taken and the device model. We remove all of it, and the original file
+        name, before any photo is stored or shown.</li>
+      <li><strong>Technical information:</strong> your IP address and basic request details (pages requested,
+        time, browser type), as every website receives. We use your IP address to limit abuse, such as repeated
+        failed logins, and our hosting provider keeps standard server logs.</li>
+    </ul>
+  </section>
+
+  <section id="use">
+    <h2>2. How we use it</h2>
+    <ul>
+      <li>To run the site: show your ads, let buyers and sellers message each other, keep you logged in, and
+        find ads near a place you search for.</li>
+      <li>To keep the site safe: prevent spam, fraud and password guessing, enforce our
+        <a href="{% url 'legal:terms' %}">Terms of Use</a>, and comply with the law.</li>
+      <li>To respond to you when you contact us.</li>
+    </ul>
+    <p>We don't use your information for advertising, we don't build profiles about you, and we don't make
+      automated decisions about you that have legal or similarly significant effects.</p>
+  </section>
+
+  <section id="public">
+    <h2>3. What other people can see</h2>
+    <ul>
+      <li><strong>Public:</strong> your username, the month you joined, and everything in your ads (including
+        photos, the location name and the approximate map pin). Anyone on the internet can see these.</li>
+      <li><strong>Only the other person in a conversation:</strong> your messages. We may review messages only to
+        investigate a report of abuse or fraud, or when the law requires it.</li>
+      <li><strong>Never shown:</strong> your email address and your password.</li>
+    </ul>
+    <p>Think before you post: don't put your home address, phone number or other personal details in an ad.</p>
+  </section>
+
+  <section id="share">
+    <h2>4. Who we share it with</h2>
+    <p><strong>We do not sell your personal information, and we do not “share” it for cross-context behavioral
+      advertising</strong> (as those terms are defined in California law). We have not done so in the past 12
+      months. We share information only in these cases:</p>
+    <ul>
+      <li><strong>Map tiles (OpenStreetMap):</strong> when a page shows a map, your browser loads map images
+        directly from the OpenStreetMap Foundation's servers, which therefore receive your IP address and the map
+        area being viewed. See the
+        <a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener">OpenStreetMap privacy policy</a>.</li>
+      <li><strong>Place search (OpenStreetMap Nominatim):</strong> when you search by a place name, our server
+        sends the text you typed (for example “Oakland, CA”) to OpenStreetMap's Nominatim service to find its
+        coordinates. Your IP address and account are not sent with it.</li>
+      <li><strong>Service providers:</strong> companies that host and run the site for us, who may process data
+        only on our behalf.</li>
+      <li><strong>Legal reasons:</strong> when required by law, a court order or other legal process, or when
+        needed to protect the rights, property or safety of our users, the public or us.</li>
+      <li><strong>A change of ownership:</strong> if the site is sold or transferred, your information would move
+        to the new operator, who must follow this policy or tell you about changes.</li>
+    </ul>
+    <p>California's “Shine the Light” law lets California residents ask which personal information we shared
+      with third parties for their own direct marketing. We don't share personal information for that purpose.</p>
+  </section>
+
+  <section id="cookies">
+    <h2>5. Cookies and tracking</h2>
+    <p>We use only two cookies, both needed for the site to work:</p>
+    <table>
+      <thead><tr><th scope="col">Cookie</th><th scope="col">Purpose</th><th scope="col">Lasts</th></tr></thead>
+      <tbody>
+        <tr><td><code>sessionid</code></td><td>Keeps you logged in</td><td>{{ session_days }} days, or until you log out</td></tr>
+        <tr><td><code>csrftoken</code></td><td>Protects forms from being submitted by other websites</td><td>{{ csrf_days }} days</td></tr>
+      </tbody>
+    </table>
+    <p>There are no analytics, advertising or social-media trackers, and we don't track you across other
+      websites. Because of that, browser “Do Not Track” signals and the Global Privacy Control don't change how
+      the site behaves: we already treat everyone as having opted out of selling and sharing.</p>
+  </section>
+
+  <section id="retention">
+    <h2>6. How long we keep it</h2>
+    <ul>
+      <li><strong>Account information:</strong> until you delete your account.</li>
+      <li><strong>Ads and their photos:</strong> until you delete the ad or your account.</li>
+      <li><strong>Messages:</strong> until the ad is deleted or either person in the conversation deletes their
+        account.</li>
+      <li><strong>Abuse-prevention records</strong> (counts linked to an IP address or account): up to 1 day.</li>
+      <li><strong>Server logs:</strong> up to 30 days.</li>
+      <li><strong>Backups:</strong> deleted information may stay in backups for up to 30 days before it is
+        overwritten.</li>
+    </ul>
+    <p>We may keep information longer when the law requires it or to resolve a dispute or investigate abuse.</p>
+  </section>
+
+  <section id="choices">
+    <h2>7. Your choices</h2>
+    <ul>
+      <li>Edit or delete any of your ads from <a href="{% url 'ads:my_ads' %}">My ads</a>.</li>
+      <li>Delete your account at any time from My ads › Delete my account. This permanently deletes your account,
+        ads, photos and conversations.</li>
+      <li>Location is optional: you can post and search without ever sharing your position.</li>
+      <li>Email us to get a copy of your information or to correct it.</li>
+    </ul>
+  </section>
+
+  <section id="california">
+    <h2>8. Your California privacy rights</h2>
+    <p>If you live in California, the California Consumer Privacy Act (as amended by the CPRA) gives you these
+      rights, and we extend them to all users:</p>
+    <ul>
+      <li><strong>Right to know</strong> what personal information we collect, use and disclose, and to get a copy
+        of it.</li>
+      <li><strong>Right to delete</strong> your personal information (you can also do this yourself by deleting
+        your account).</li>
+      <li><strong>Right to correct</strong> inaccurate personal information.</li>
+      <li><strong>Right to opt out of the sale or sharing</strong> of your personal information. We don't sell or
+        share it, so there is nothing to opt out of.</li>
+      <li><strong>Right to limit the use of sensitive personal information.</strong> The only sensitive
+        information we handle is your password and, if you choose to provide it, an approximate location; we use
+        them only to provide the service you asked for.</li>
+      <li><strong>Right not to be discriminated against</strong> for using any of these rights.</li>
+    </ul>
+    <p>To make a request, email us at the address below. We'll confirm the request is yours, usually by asking
+      you to confirm it from your account or with details only the account holder would know, and we'll respond
+      within 45 days. You can use an authorized agent; we may ask for proof that they're acting for you.</p>
+    <p><strong>Categories collected in the past 12 months:</strong> identifiers (username, email address, IP
+      address); account login information; internet activity on this site (requests and server logs);
+      approximate geolocation (only if you share it); and the content of your ads, photos and messages. Sources:
+      you, and your browser. Purposes: those listed in section 2. We disclosed identifiers and internet activity
+      to our hosting providers, and place names you search for to OpenStreetMap, for those purposes only.</p>
+    <p>Minors' content: users must be at least {{ minimum_age }}. If you're under 18 and posted something
+      anyway, you can delete it yourself or ask us to remove it.</p>
+  </section>
+
+  <section id="children">
+    <h2>9. Children</h2>
+    <p>Classifieds is not for children. You must be at least {{ minimum_age }} to create an account, and we don't
+      knowingly collect personal information from anyone under 13. If you believe a child has given us personal
+      information, contact us and we'll delete it.</p>
+  </section>
+
+  <section id="security">
+    <h2>10. Security</h2>
+    <p>We protect your information with HTTPS encryption, hashed passwords, limits on login attempts, and access
+      controls on private data such as messages. No website can be perfectly secure, so please use a password
+      you don't use anywhere else. If a security breach affects your personal information, we'll notify you as
+      required by law.</p>
+  </section>
+
+  <section id="changes">
+    <h2>11. Changes to this policy</h2>
+    <p>If we change this policy, we'll post the new version on this page and update the effective date. If the
+      changes are significant, we'll also show a notice on the site before they take effect.</p>
+  </section>
+
+  <section id="contact">
+    <h2>12. Contact us</h2>
+    <p>For privacy questions or requests, email
+      {% if contact_email %}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}<span class="placeholder">[contact email]</span>{% endif %}.
+      Classifieds is operated by
+      {% if operator %}{{ operator }}{% else %}<span class="placeholder">[operator name]</span>{% endif %}.</p>
+  </section>
+</article>
+{% endblock %}

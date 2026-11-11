@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'ads',
     'accounts',
     'messaging',
+    'legal',
 ]
 
 MIDDLEWARE = [
@@ -165,6 +166,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'ads:list'
 LOGOUT_REDIRECT_URL = 'ads:list'
+
+# Who runs the site, named in the Privacy Policy and Terms of Use. Required before a
+# public launch (`manage.py check --deploy` warns when they're missing).
+SITE_OPERATOR = os.environ.get('DJANGO_SITE_OPERATOR', '')          # person or company name
+SITE_CONTACT_EMAIL = os.environ.get('DJANGO_SITE_CONTACT_EMAIL', '')  # privacy and legal requests
+DMCA_AGENT = os.environ.get('DJANGO_DMCA_AGENT', '')                # name/address registered with the US Copyright Office
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

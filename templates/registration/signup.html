@@ -8,7 +8,15 @@
     <form method="post">
       {% csrf_token %}
       {% if form.non_field_errors %}<ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-      {% for field in form %}{% include "_field.html" %}{% endfor %}
+      {% for field in form %}{% if field.name != 'accept_terms' %}{% include "_field.html" %}{% endif %}{% endfor %}
+      <div class="form-field consent{% if form.accept_terms.errors %} has-error{% endif %}">
+        <label class="checkbox">
+          <input type="checkbox" name="accept_terms" id="id_accept_terms" required{% if form.accept_terms.value %} checked{% endif %}>
+          <span>I'm 18 or older and I agree to the <a href="{% url 'legal:terms' %}">Terms of Use</a> and
+            <a href="{% url 'legal:privacy' %}">Privacy Policy</a>.</span>
+        </label>
+        {{ form.accept_terms.errors }}
+      </div>
       <button class="btn block mt-6">Sign up</button>
     </form>
   </div>

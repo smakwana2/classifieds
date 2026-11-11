@@ -22,6 +22,9 @@
         {% include "_field.html" with field=form.category %}
       </div>
       {% include "_field.html" with field=form.tag_names %}
+      <p class="hint notice">Housing and job ads must follow fair-housing and equal-employment laws: don't state a
+        preference based on race, religion, sex, disability, family status or any other protected characteristic.
+        See the <a href="{% url 'legal:terms' %}#rules">rules for ads</a>.</p>
     </section>
 
     <section class="form-section">

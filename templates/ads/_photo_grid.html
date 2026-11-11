@@ -14,7 +14,7 @@
         {% elif link == 'none' %}
           <span class="photo"><img src="{{ image.thumb_url }}" alt="" loading="lazy"></span>
         {% else %}
-          <a href="{{ ad.get_absolute_url }}" class="photo" tabindex="-1">
+          <a href="{{ ad.get_absolute_url }}" class="photo" tabindex="-1" aria-label="{{ ad.title }}, photo {{ forloop.counter }}">
             <img src="{{ image.thumb_url }}" alt="" loading="lazy">
           </a>
         {% endif %}

@@ -12,6 +12,7 @@ A simple classified-ads site built with Python and Django.
 - **User accounts**: sign up, log in and log out
 - **Delete your account** (password confirmation; deletes all your ads too)
 - **Delete your ads** (owners only)
+- **Privacy Policy and Terms of Use** pages, with a signup consent checkbox (18+) recorded per Terms version; see [docs/compliance.md](docs/compliance.md)
 - **Messages**: buyers message sellers from an ad page; both get an inbox with unread counts and a private conversation per ad. Emails are never shown.
 
 Maps use [Leaflet](https://leafletjs.com/) with OpenStreetMap tiles.
@@ -74,6 +75,9 @@ Settings are read from environment variables. They **fail safe**: debug mode is 
 | `DJANGO_SSL_REDIRECT` | `1` | Redirect HTTP to HTTPS when not in debug mode |
 | `DJANGO_HSTS_SECONDS` | 30 days | `Strict-Transport-Security` max-age |
 | `DJANGO_HSTS_SUBDOMAINS` | `0` | Only if every subdomain is HTTPS-only |
+| `DJANGO_SITE_OPERATOR` | none | Who runs the site, shown in the Privacy Policy and Terms |
+| `DJANGO_SITE_CONTACT_EMAIL` | none | Address for privacy, legal and abuse requests |
+| `DJANGO_DMCA_AGENT` | none | DMCA agent name and address registered with the US Copyright Office |
 
 ## Deploying
 
@@ -86,6 +90,7 @@ The app is ready for a public deployment once these are in place:
 5. **App server:** run gunicorn (or similar) behind nginx or a platform router over HTTPS, with `DJANGO_BEHIND_PROXY=1`. Cap request bodies at the proxy (e.g. nginx `client_max_body_size 20m;`).
 6. **Cache:** the default file cache is shared by all processes on one machine. With several machines, set `DJANGO_REDIS_URL` so rate limits and the geocoding throttle are shared.
 7. **Database:** SQLite is fine for a small site; use PostgreSQL for real traffic.
+8. **Legal:** set the three `DJANGO_SITE_*` / `DJANGO_DMCA_AGENT` variables and work through [docs/compliance.md](docs/compliance.md) (US and California checklist: privacy policy, terms, DMCA, fair housing, accessibility).
 
 Security already built in:
 - Uploaded photos are re-encoded: GPS and other metadata stripped, size capped, random file names. Map pins are rounded to about 100 m.
