@@ -4,7 +4,7 @@
 <header class="page-head section-head">
   <div>
     <h1>My ads</h1>
-    <p class="muted" style="margin:6px 0 0">{{ ads|length }} listing{{ ads|length|pluralize }}</p>
+    <p class="muted page-sub">{{ ads|length }} listing{{ ads|length|pluralize }}</p>
   </div>
   <a class="btn" href="{% url 'ads:create' %}"><svg class="icon"><use href="#i-plus"/></svg>Post an ad</a>
 </header>
@@ -16,8 +16,8 @@
         {% include "ads/_photo_grid.html" %}
         <div>
           <h3><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h3>
-          <div class="meta-row" style="margin-top:4px">
-            {% if ad.price is not None %}<span><strong style="color:var(--ink)">{% if ad.price %}${{ ad.price|floatformat:"-2g" }}{% else %}Free{% endif %}</strong></span>{% endif %}
+          <div class="meta-row mt-4">
+            {% if ad.price is not None %}<span><strong class="ink">{% if ad.price %}${{ ad.price|floatformat:"-2g" }}{% else %}Free{% endif %}</strong></span>{% endif %}
             <span>{{ ad.category }}</span>
             <span><svg class="icon"><use href="#i-clock"/></svg>{{ ad.created_at|date:"M j, Y" }}</span>
           </div>

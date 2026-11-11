@@ -1,3 +1,16 @@
+/* Fonts are self-hosted (SIL Open Font License, see static/vendor/fonts/), so pages make
+   no requests to third parties. Both are variable fonts covering every weight used. */
+@font-face {
+  font-family: 'Fraunces'; font-style: normal; font-weight: 500 600; font-display: swap;
+  src: url('../vendor/fonts/fraunces-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter'; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url('../vendor/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* ==========================================================================
    Classifieds — design tokens
    ========================================================================== */
@@ -453,3 +466,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* Small utilities (the Content-Security-Policy forbids inline style attributes). */
+.sprite { position: absolute; }
+.page-sub { margin: 6px 0 0; }
+.m-0 { margin: 0; }
+.mt-4 { margin-top: 4px; }
+.mt-6 { margin-top: 6px; }
+.mt-12 { margin-top: 12px; }
+.mt-18 { margin-top: 18px; }
+.mt-20 { margin-top: 20px; }
+.mb-18 { margin: 0 0 18px; }
+.mb-28 { margin-bottom: 28px; }
+.price-big.price-request { font-size: 1.4rem; }
+.ink { color: var(--ink); }

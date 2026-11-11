@@ -10,7 +10,7 @@
       {% if form.non_field_errors %}<ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
       {% for field in form %}{% include "_field.html" %}{% endfor %}
       <input type="hidden" name="next" value="{{ next }}">
-      <button class="btn block" style="margin-top:6px">Log in</button>
+      <button class="btn block mt-6">Log in</button>
     </form>
   </div>
   <p class="alt">New here? <a href="{% url 'signup' %}">Create an account</a></p>

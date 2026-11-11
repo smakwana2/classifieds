@@ -18,11 +18,11 @@
   <div>
     {% include "ads/_photo_grid.html" with size="large" link="lightbox" %}
 
-    <section class="panel" {% if ad.images.all %}style="margin-top:20px"{% endif %}>
+    <section class="panel{% if ad.images.all %} mt-20{% endif %}">
       <h2>Description</h2>
       <div class="description">{{ ad.description|linebreaks }}</div>
       {% if ad.tags.all %}
-        <div class="chip-row" style="margin-top:18px">
+        <div class="chip-row mt-18">
           {% for tag in ad.tags.all %}<a class="chip tag" href="{{ tag.get_absolute_url }}">#{{ tag.name }}</a>{% endfor %}
         </div>
       {% endif %}
@@ -34,9 +34,9 @@
       {% if ad.price is not None %}
         <div class="price-big{% if not ad.price %} free{% endif %}">{% if ad.price %}${{ ad.price|floatformat:"-2g" }}{% else %}Free{% endif %}</div>
       {% else %}
-        <div class="price-big" style="font-size:1.4rem">Price on request</div>
+        <div class="price-big price-request">Price on request</div>
       {% endif %}
-      <a class="chip" href="{{ ad.category.get_absolute_url }}" style="margin-top:12px">
+      <a class="chip mt-12" href="{{ ad.category.get_absolute_url }}">
         <span aria-hidden="true">{{ ad.category.icon }}</span>{{ ad.category }}
       </a>
       <div class="seller">
@@ -62,16 +62,4 @@
     {% endif %}
   </aside>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{% if ad.has_coordinates %}
-<script>
-const el = document.getElementById('map');
-const ll = [parseFloat(el.dataset.lat), parseFloat(el.dataset.lng)];
-const map = L.map(el, { scrollWheelZoom: false }).setView(ll, 13);
-addBaseLayer(map);
-L.marker(ll).addTo(map);
-</script>
-{% endif %}
 {% endblock %}

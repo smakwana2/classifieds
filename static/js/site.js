@@ -83,3 +83,69 @@ function addBaseLayer(map) {
     sync();
   });
 })();
+
+// Ad page: map with the ad's (rounded) location.
+(function () {
+  const el = document.querySelector('#map[data-lat][data-lng]');
+  if (!el) return;
+  const ll = [parseFloat(el.dataset.lat), parseFloat(el.dataset.lng)];
+  const map = L.map(el, { scrollWheelZoom: false }).setView(ll, 13);
+  addBaseLayer(map);
+  L.marker(ll).addTo(map);
+})();
+
+// Post/edit form: click the map (or use the browser's location) to set the pin.
+(function () {
+  const latInput = document.getElementById('id_latitude');
+  const lngInput = document.getElementById('id_longitude');
+  const el = document.getElementById('map');
+  if (!latInput || !lngInput || !el) return;
+  const map = L.map(el).setView([20, 0], 2);
+  addBaseLayer(map);
+  let marker = null;
+
+  function place(lat, lng, zoom) {
+    latInput.value = lat.toFixed(3);  // stored rounded to about 100 m anyway
+    lngInput.value = lng.toFixed(3);
+    if (marker) marker.setLatLng([lat, lng]); else marker = L.marker([lat, lng]).addTo(map);
+    if (zoom) map.setView([lat, lng], zoom);
+  }
+
+  if (latInput.value && lngInput.value) place(parseFloat(latInput.value), parseFloat(lngInput.value), 13);
+  map.on('click', e => place(e.latlng.lat, e.latlng.lng));
+  document.getElementById('use-location').addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => place(pos.coords.latitude, pos.coords.longitude, 14),
+      () => alert('Could not get your location.')
+    );
+  });
+})();
+
+// Search bar: typing a place clears coordinates; the locate button searches near you.
+(function () {
+  const near = document.getElementById('id_near');
+  const button = document.getElementById('near-me');
+  if (!near || !button) return;
+  const lat = document.getElementById('id_lat');
+  const lng = document.getElementById('id_lng');
+  near.addEventListener('input', () => { lat.value = ''; lng.value = ''; });
+  button.addEventListener('click', () => {
+    const label = button.querySelector('span');
+    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+    label.textContent = 'Finding your location…';
+    button.classList.add('busy');
+    navigator.geolocation.getCurrentPosition(pos => {
+      near.value = '';
+      lat.value = pos.coords.latitude.toFixed(3);
+      lng.value = pos.coords.longitude.toFixed(3);
+      const radius = document.getElementById('id_radius');
+      if (!radius.value) radius.value = 15;
+      button.form.submit();
+    }, () => {
+      label.textContent = 'Use my current location';
+      button.classList.remove('busy');
+      alert('Could not get your location.');
+    });
+  });
+})();

@@ -1,2 +1,6 @@
-Django>=5.2,<6
-Pillow>=11
+# Exact versions, so every install gets the same, known code. Update deliberately:
+# bump a version here, run the tests, and check the release notes for security fixes.
+Django==5.2.18
+Pillow==13.0.0
+asgiref==3.13.0
+sqlparse==0.6.0

@@ -35,3 +35,24 @@ class SettingsFailSafeTests(SimpleTestCase):
         result = self.load(DJANGO_DEBUG='1')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(result.stdout.startswith('True False False'))
+
+
+class SecurityHeaderTests(SimpleTestCase):
+    def test_pages_send_csp_and_permissions_policy(self):
+        response = self.client.get('/accounts/login/')
+        csp = response.headers['Content-Security-Policy']
+        self.assertIn("script-src 'self';", csp)
+        self.assertIn("style-src 'self';", csp)
+        self.assertIn("frame-ancestors 'none'", csp)
+        self.assertIn('geolocation=(self)', response.headers['Permissions-Policy'])
+
+    def test_templates_have_no_inline_code_or_third_party_assets(self):
+        # The CSP would block these; keep scripts in static/js and styles in classes.
+        import re
+        for path in (BASE_DIR / 'templates').rglob('*.html'):
+            html = path.read_text()
+            with self.subTest(template=str(path.relative_to(BASE_DIR))):
+                self.assertNotRegex(html, r'<script(?![^>]*\bsrc=)[^>]*>', 'inline <script>')
+                self.assertNotIn('style="', html)
+                self.assertNotRegex(html, r'\son[a-z]+="', 'inline event handler')
+                self.assertIsNone(re.search(r'(src|href)="https?://(?!www\.openstreetmap\.org)', html))

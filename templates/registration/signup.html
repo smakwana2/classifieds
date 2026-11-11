@@ -9,7 +9,7 @@
       {% csrf_token %}
       {% if form.non_field_errors %}<ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
       {% for field in form %}{% include "_field.html" %}{% endfor %}
-      <button class="btn block" style="margin-top:6px">Sign up</button>
+      <button class="btn block mt-6">Sign up</button>
     </form>
   </div>
   <p class="alt">Already have an account? <a href="{% url 'login' %}">Log in</a></p>

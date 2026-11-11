@@ -41,6 +41,7 @@ Demo listing photos are from Wikimedia Commons under their own licences, and map
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+export DJANGO_DEBUG=1                # local development (or use the Makefile: make setup, make run)
 python manage.py migrate
 python manage.py seed_categories     # starter categories and subcategories
 python manage.py seed_ads            # optional: demo ads around the SF Bay Area, with photos
@@ -58,10 +59,35 @@ python manage.py test
 
 ## Configuration
 
-Settings are read from environment variables. The defaults are for local development only.
+Settings are read from environment variables. They **fail safe**: debug mode is off unless you turn it on, and without debug mode the site refuses to start until you set a real secret key.
 
-| Variable | Default |
-| --- | --- |
-| `DJANGO_SECRET_KEY` | an insecure development key |
-| `DJANGO_DEBUG` | `1` (set to `0` in production) |
-| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` |
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `DJANGO_DEBUG` | `0` | `1` for local development only (the Makefile sets it) |
+| `DJANGO_SECRET_KEY` | none | Required when `DJANGO_DEBUG` is not `1` |
+| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated host names |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | none | e.g. `https://classifieds.example.com` |
+| `DJANGO_BEHIND_PROXY` | `0` | `1` when a reverse proxy sets `X-Forwarded-For` / `X-Forwarded-Proto` |
+| `DJANGO_REDIS_URL` | none | Use Redis as the shared cache instead of files in `.cache/` |
+| `DJANGO_CACHE_DIR` | `.cache/` | Location of the file cache |
+| `DJANGO_SSL_REDIRECT` | `1` | Redirect HTTP to HTTPS when not in debug mode |
+| `DJANGO_HSTS_SECONDS` | 30 days | `Strict-Transport-Security` max-age |
+| `DJANGO_HSTS_SUBDOMAINS` | `0` | Only if every subdomain is HTTPS-only |
+
+## Deploying
+
+The app is ready for a public deployment once these are in place:
+
+1. **Settings:** set `DJANGO_SECRET_KEY` (e.g. `python -c "import secrets; print(secrets.token_urlsafe(50))"`), `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`, and leave `DJANGO_DEBUG` unset. Run `python manage.py check --deploy`.
+2. **Database and photos:** `python manage.py migrate`, then `python manage.py reprocess_images` once if the database has photos uploaded before metadata stripping existed.
+3. **Static files:** `python manage.py collectstatic` and serve `staticfiles/` at `/static/`. Everything (Leaflet, fonts) is self-hosted.
+4. **Uploaded photos:** Django does not serve `/media/` outside debug mode. Serve `media/` from the web server (or object storage) as static files only, with `X-Content-Type-Options: nosniff`, ideally from a separate cookieless domain.
+5. **App server:** run gunicorn (or similar) behind nginx or a platform router over HTTPS, with `DJANGO_BEHIND_PROXY=1`. Cap request bodies at the proxy (e.g. nginx `client_max_body_size 20m;`).
+6. **Cache:** the default file cache is shared by all processes on one machine. With several machines, set `DJANGO_REDIS_URL` so rate limits and the geocoding throttle are shared.
+7. **Database:** SQLite is fine for a small site; use PostgreSQL for real traffic.
+
+Security already built in:
+- Uploaded photos are re-encoded: GPS and other metadata stripped, size capped, random file names. Map pins are rounded to about 100 m.
+- Rate limits on login, signup, posting and location lookups.
+- A Content Security Policy with no inline scripts or styles, plus `Permissions-Policy`, clickjacking protection, HSTS and secure cookies outside debug mode.
+- Exact dependency versions in `requirements.txt`.
