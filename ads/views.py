@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -110,6 +111,7 @@ def ad_detail(request, pk):
 
 
 @login_required
+@transaction.atomic
 def ad_create(request):
     form = AdForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
@@ -123,14 +125,16 @@ def ad_create(request):
 
 
 @login_required
+@transaction.atomic
 def ad_edit(request, pk):
     ad = get_object_or_404(Ad, pk=pk, owner=request.user)
+    saved_title = ad.title  # validation updates `ad` in place; the heading should not
     form = AdForm(request.POST or None, request.FILES or None, instance=ad)
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, 'Your ad has been updated.')
         return redirect(ad)
-    return render(request, 'ads/ad_form.html', {'form': form, 'ad': ad})
+    return render(request, 'ads/ad_form.html', {'form': form, 'ad': ad, 'saved_title': saved_title})
 
 
 @login_required

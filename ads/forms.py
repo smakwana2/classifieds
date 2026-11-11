@@ -99,11 +99,7 @@ class AdForm(forms.ModelForm):
 
     def save_related(self, ad):
         """Save tags and images; call after the ad itself has been saved."""
-        tags = []
-        for name in self.cleaned_data['tag_names']:
-            tag = Tag.objects.filter(slug=slugify(name)).first() or Tag.objects.create(name=name)
-            tags.append(tag)
-        ad.tags.set(tags)
+        ad.tags.set([Tag.objects.get_or_create(name=name)[0] for name in self.cleaned_data['tag_names']])
 
         for image in self.cleaned_data.get('remove_images') or []:
             image.delete()

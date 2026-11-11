@@ -592,3 +592,67 @@ class PhotoPrivacyTests(TestCase):
         self.assertFalse(os.path.exists(old_path))
         with Image.open(old.image.path) as stored:
             self.assertEqual(len(stored.getexif()), 0)
+
+
+class CorrectnessTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('alice', password='pw-12345!')
+        self.parent = Category.objects.create(name='For Sale')
+        self.sub = Category.objects.create(name='Books', parent=self.parent)
+        self.client.login(username='alice', password='pw-12345!')
+
+    def post_ad(self, **data):
+        base = {'title': 'Book', 'description': 'x', 'category': self.sub.pk, 'tag_names': ''}
+        base.update(data)
+        return self.client.post(reverse('ads:create'), base)
+
+    def test_tags_that_slugify_alike_stay_separate(self):
+        self.post_ad(title='One', tag_names='c++')
+        self.post_ad(title='Two', tag_names='c#, c++')
+        self.assertEqual(sorted(Tag.objects.values_list('name', 'slug')), [('c#', 'c-2'), ('c++', 'c')])
+        two = Ad.objects.get(title='Two')
+        self.assertEqual(sorted(t.name for t in two.tags.all()), ['c#', 'c++'])
+        self.assertEqual(Tag.objects.get(name='c++').ads.count(), 2)  # existing tag reused by name
+
+    def test_category_hierarchy_is_two_levels_without_loops(self):
+        from django.core.exceptions import ValidationError
+        self.parent.parent = self.parent
+        with self.assertRaisesMessage(ValidationError, 'its own parent'):
+            self.parent.full_clean()
+        self.parent.parent = self.sub
+        with self.assertRaisesMessage(ValidationError, 'top-level'):
+            self.parent.full_clean()
+        other = Category.objects.create(name='Vehicles')
+        self.parent.parent = other
+        with self.assertRaisesMessage(ValidationError, 'has subcategories'):
+            self.parent.full_clean()
+
+    def test_category_slugs_are_unique(self):
+        a = Category.objects.create(name='Misc Stuff')
+        b = Category.objects.create(name='Stuff', parent=Category.objects.create(name='Misc'))
+        self.assertEqual((a.slug, b.slug), ('misc-stuff', 'misc-stuff-2'))
+
+    def test_negative_price_rejected(self):
+        response = self.post_ad(price='-50')
+        self.assertContains(response, 'greater than or equal to 0')
+        self.assertFalse(Ad.objects.exists())
+
+    def test_edit_heading_shows_saved_title_after_invalid_submit(self):
+        ad = Ad.objects.create(owner=self.user, title='Old title', description='x', category=self.sub)
+        response = self.client.post(reverse('ads:edit', args=[ad.pk]), {
+            'title': 'New title', 'description': '', 'category': self.sub.pk, 'tag_names': ''})
+        self.assertContains(response, 'Edit \u201cOld title\u201d')
+        self.assertNotContains(response, 'Edit \u201cNew title\u201d')
+
+    def test_failed_photo_save_rolls_back_the_new_ad(self):
+        with mock.patch.object(AdImage, 'create_from_file', side_effect=OSError('disk full')):
+            with self.assertRaises(OSError), self.assertLogs('django.request', 'ERROR'):
+                self.post_ad(images=[make_image()])
+        self.assertFalse(Ad.objects.exists())
+
+    def test_seed_refuses_to_use_a_real_account(self):
+        from django.core.management.base import CommandError
+        User.objects.create_user('bayarea_demo', password='pw-12345!')
+        with self.assertRaisesMessage(CommandError, 'real account'):
+            call_command('seed_ads', stdout=io.StringIO())
+        self.assertFalse(Ad.objects.exists())

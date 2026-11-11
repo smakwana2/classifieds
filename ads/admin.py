@@ -7,13 +7,13 @@ from .models import Ad, AdImage, Category, Tag
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'parent', 'slug']
     list_filter = ['parent']
-    prepopulated_fields = {'slug': ['name']}
+    exclude = ['slug']  # generated on save, including the parent's name for subcategories
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug']
-    prepopulated_fields = {'slug': ['name']}
+    exclude = ['slug']  # generated on save, unique even when names slugify alike
 
 
 class AdImageInline(admin.TabularInline):

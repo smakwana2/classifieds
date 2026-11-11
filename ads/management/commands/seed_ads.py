@@ -9,9 +9,8 @@ from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.utils.text import slugify
 
 from ads.models import Ad, AdImage, Category, Tag
 
@@ -146,6 +145,9 @@ class Command(BaseCommand):
 
         User = get_user_model()
         owner = User.objects.filter(username=user).first()
+        if owner is not None and owner.has_usable_password():
+            # Someone signed up with this name; don't attach demo ads to a real account.
+            raise CommandError(f'"{user}" is a real account (it has a password); choose another --user.')
         if owner is None:
             owner = User(username=user)
             owner.set_unusable_password()  # a placeholder seller, not a real login
@@ -171,9 +173,7 @@ class Command(BaseCommand):
                 latitude=spec['lat'],
                 longitude=spec['lng'],
             )
-            ad.tags.set([
-                Tag.objects.filter(slug=slugify(t)).first() or Tag.objects.create(name=t) for t in spec['tags']
-            ])
+            ad.tags.set([Tag.objects.get_or_create(name=t)[0] for t in spec['tags']])
             for p in spec['photos'][:AdImage.MAX_PER_AD]:
                 with open(PHOTO_DIR / p['file'], 'rb') as fh:
                     AdImage.create_from_file(ad, fh)

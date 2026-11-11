@@ -1,6 +1,7 @@
 import math
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.db.models.signals import post_delete
@@ -38,6 +39,15 @@ def bounding_box(lat, lng, miles):
             box.update(longitude__gte=lng - dlng, longitude__lte=lng + dlng)
     return box
 
+def unique_slug(model, base, pk=None, max_length=50):
+    """`base`, or `base-2`, `base-3`... whichever is not taken by another row."""
+    base = base[:max_length - 4] or 'item'
+    slug, n = base, 2
+    while model.objects.filter(slug=slug).exclude(pk=pk).exists():
+        slug, n = f'{base}-{n}', n + 1
+    return slug
+
+
 CATEGORY_ICONS = {
     'for-sale': '🛍️',
     'vehicles': '🚗',
@@ -69,12 +79,23 @@ class Category(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.parent} › {self.name}' if self.parent else self.name
+        return f'{self.parent.name} › {self.name}' if self.parent else self.name
+
+    def clean(self):
+        # Exactly two levels (category › subcategory), which also rules out loops.
+        if self.parent_id is None:
+            return
+        if self.parent_id == self.pk:
+            raise ValidationError({'parent': 'A category cannot be its own parent.'})
+        if self.parent.parent_id is not None:
+            raise ValidationError({'parent': 'Choose a top-level category; subcategories cannot have subcategories.'})
+        if self.pk and self.subcategories.exists():
+            raise ValidationError({'parent': 'This category has subcategories, so it cannot become one itself.'})
 
     def save(self, *args, **kwargs):
         if not self.slug:
             base = slugify(f'{self.parent.name} {self.name}' if self.parent else self.name)
-            self.slug = base
+            self.slug = unique_slug(Category, base, self.pk, max_length=120)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -83,16 +104,11 @@ class Category(models.Model):
     @property
     def icon(self):
         """Emoji for the top-level category this one belongs to."""
-        root = self
-        while root.parent_id:
-            root = root.parent
+        root = self.parent if self.parent_id else self
         return CATEGORY_ICONS.get(root.slug, '🏷️')
 
     def self_and_descendant_ids(self):
-        ids = [self.pk]
-        for child in self.subcategories.all():
-            ids.extend(child.self_and_descendant_ids())
-        return ids
+        return [self.pk, *self.subcategories.values_list('pk', flat=True)]
 
 
 class Tag(models.Model):
@@ -107,7 +123,8 @@ class Tag(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            # "c++", "c#" and "c" all slugify to "c", so later ones get "c-2", "c-3"...
+            self.slug = unique_slug(Tag, slugify(self.name), self.pk, max_length=60)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -118,7 +135,8 @@ class Ad(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='ads', on_delete=models.CASCADE)
     title = models.CharField(max_length=150)
     description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                validators=[MinValueValidator(0)])
     category = models.ForeignKey(Category, related_name='ads', on_delete=models.PROTECT)
     tags = models.ManyToManyField(Tag, related_name='ads', blank=True)
     location_name = models.CharField('location', max_length=150, blank=True)

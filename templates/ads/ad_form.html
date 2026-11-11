@@ -4,7 +4,7 @@
 <div class="form-shell">
   <header class="page-head">
     {% if ad %}<div class="crumbs"><a href="{{ ad.get_absolute_url }}">← Back to ad</a></div>{% endif %}
-    <h1>{% if ad %}Edit “{{ ad.title }}”{% else %}Post an ad{% endif %}</h1>
+    <h1>{% if ad %}Edit “{{ saved_title }}”{% else %}Post an ad{% endif %}</h1>
     <p class="muted" style="margin:6px 0 0">{% if ad %}Update the details, photos or location.{% else %}Tell buyers what you've got — it only takes a minute.{% endif %}</p>
   </header>
 
