@@ -37,6 +37,18 @@ class SettingsFailSafeTests(SimpleTestCase):
         self.assertTrue(result.stdout.startswith('True False False'))
 
 
+class FaviconTests(SimpleTestCase):
+    def test_pages_link_the_icons_and_files_exist(self):
+        html = self.client.get('/accounts/login/').content.decode()
+        for name in ('favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'site.webmanifest'):
+            self.assertIn(f'/static/icons/{name}', html)
+            self.assertTrue((BASE_DIR / 'static' / 'icons' / name).exists(), name)
+
+    def test_root_favicon_redirects_to_the_static_file(self):
+        response = self.client.get('/favicon.ico')
+        self.assertRedirects(response, '/static/icons/favicon.ico', status_code=301, fetch_redirect_response=False)
+
+
 class SecurityHeaderTests(SimpleTestCase):
     def test_pages_send_csp_and_permissions_policy(self):
         response = self.client.get('/accounts/login/')
